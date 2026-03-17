@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Square, ExternalLink, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -13,11 +14,11 @@ interface SessionRowProps {
     onCancel?: () => void;
 }
 
-export function SessionRow({ id, status, repo, task, duration, onCancel }: SessionRowProps) {
+export const SessionRow = memo(function SessionRow({ id, status, repo, task, duration, onCancel }: SessionRowProps) {
     const statusStyles = {
         PENDING: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
         RUNNING: "bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]",
-        COMPLETED: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+        COMPLETED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
         FAILED: "bg-rose-500/10 text-rose-500 border-rose-500/20",
         CANCELLED: "bg-zinc-800/50 text-zinc-500 border-zinc-700/30",
     };
@@ -75,4 +76,4 @@ export function SessionRow({ id, status, repo, task, duration, onCancel }: Sessi
             </div>
         </motion.div>
     )
-}
+});

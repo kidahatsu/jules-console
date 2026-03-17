@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { getStarredRepos, unstarRepo as githubUnstar, mapGithubRepo } from "@/lib/github";
+import { useEffect, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getStarredRepos, unstarRepo as githubUnstar, mapGithubRepo, type GithubRepo } from "@/lib/github";
 import { getJulesSession, getJulesActivities } from "@/lib/jules";
 import { useStore } from "@/lib/store";
-import { CachePolicy } from "@/lib/cache";
 import { StarredReviewService } from "@/lib/starredReviews";
 
 export type ReviewStatus = "TO_REVIEW" | "REVIEWED" | "REJECTED";
@@ -13,6 +13,8 @@ export interface StarredRepo {
     full_name: string;
     description: string | null;
     html_url: string;
+    clone_url: string;
+    ssh_url: string;
     language: string | null;
     stargazers_count: number;
     updated_at: string;
@@ -29,111 +31,78 @@ export interface StarredRepo {
 export function useStarredRepos() {
     const activeAccount = useStore(state => state.activeAccount);
     const updateCache = useStore(state => state.updateCache);
-    const cachedStarred = useStore(state => state.cache.starred);
+    const queryClient = useQueryClient();
 
-    const [repos, setRepos] = useState<StarredRepo[]>(cachedStarred.data);
-    const [loading, setLoading] = useState(cachedStarred.timestamp === 0);
-    const [error, setError] = useState<string | null>(null);
+    const queryKey = useMemo(() => ["starred-repos", activeAccount?.id], [activeAccount?.id]);
 
-    // 1. Fetch from API + Load from Local Storage
-    const fetchStarred = useCallback(async (force = false) => {
-        if (!activeAccount?.githubToken) {
-            setRepos([]);
-            setLoading(false);
-            return;
-        }
-
-        const currentCache = useStore.getState().cache.starred;
-
-        // Cache Hit Verification
-        const isFresh = CachePolicy.isFresh(currentCache, CachePolicy.STANDARD_TTL);
-        const hasValidStructure = CachePolicy.isValidList(currentCache.data, "owner");
-
-        if (!force && isFresh && hasValidStructure && currentCache.data.length > 0) {
-            setRepos(currentCache.data);
-            setLoading(false);
-            return;
-        }
-
-        if (force || currentCache.timestamp === 0) {
-            setLoading(true);
-        }
-
-        setError(null);
-        try {
+    const { data: repos = [], isLoading, isFetching, error, refetch } = useQuery({
+        queryKey,
+        queryFn: async () => {
+            if (!activeAccount?.githubToken) return [];
+            
             // Load local review metadata
             const reviewsMap = StarredReviewService.getReviews();
-            let aggregatedRepos: StarredRepo[] = [];
             
-            const handleIncrementalUpdate = (batch: Record<string, unknown>[]) => {
-                const mappedBatch: StarredRepo[] = batch.map(r => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const item = r as any as { language?: string; stargazers_count?: number };
+            const handleUpdate = (batch: GithubRepo[]) => {
+                const mapped = batch.map(r => {
                     const base = mapGithubRepo(r);
                     const review = reviewsMap[base.id];
                     return {
                         ...base,
-                        language: item.language || null,
-                        stargazers_count: item.stargazers_count || 0,
-                        reviewStatus: review?.status || "TO_REVIEW",
+                        reviewStatus: (review?.status as ReviewStatus) || "TO_REVIEW",
                         notes: review?.notes,
                         activeSessionId: review?.activeSessionId
                     };
                 });
-                
-                aggregatedRepos = [...aggregatedRepos, ...mappedBatch];
-                setRepos(aggregatedRepos);
-                updateCache("starred", aggregatedRepos);
+                // Update the query data immediately for the first page
+                queryClient.setQueryData(queryKey, mapped);
             };
 
-            await getStarredRepos(handleIncrementalUpdate);
-        } catch (err) {
-            console.error("Failed to load starred repos", err);
-            setError("Failed to load starred repositories.");
-        } finally {
-            setLoading(false);
-        }
-    }, [activeAccount, updateCache]);
-
-    useEffect(() => {
-        fetchStarred();
-    }, [fetchStarred]);
+            const rawRepos = await getStarredRepos(handleUpdate);
+            
+            return (rawRepos as unknown as GithubRepo[]).map(r => {
+                const base = mapGithubRepo(r);
+                const review = reviewsMap[base.id];
+                return {
+                    ...base,
+                    reviewStatus: (review?.status as ReviewStatus) || "TO_REVIEW",
+                    notes: review?.notes,
+                    activeSessionId: review?.activeSessionId
+                };
+            });
+        },
+        enabled: !!activeAccount?.githubToken,
+        placeholderData: (prev) => prev,
+        staleTime: 10 * 60 * 1000, // 10 minutes
+    });
 
     // 2. Persist Updates
     const saveToLocalAndCache = useCallback((data: StarredRepo[]) => {
         StarredReviewService.persistList(data);
         updateCache("starred", data);
-    }, [updateCache]);
+        refetch(); // Refresh list to reflect persistence changes
+    }, [updateCache, refetch]);
 
     const updateReview = (id: number, status: ReviewStatus, notes?: string) => {
-        setRepos(prev => {
-            const next = prev.map(repo => 
-                repo.id === id ? { ...repo, reviewStatus: status, notes } : repo
-            );
-            saveToLocalAndCache(next);
-            return next;
-        });
+        const next = repos.map(repo => 
+            repo.id === id ? { ...repo, reviewStatus: status, notes } : repo
+        );
+        saveToLocalAndCache(next);
     };
 
     const bindSession = useCallback((repoId: number, sessionId: string) => {
-        setRepos(prev => {
-            const next = prev.map(repo => 
-                repo.id === repoId ? { ...repo, activeSessionId: sessionId } : repo
-            );
-            saveToLocalAndCache(next);
-            return next;
-        });
-    }, [saveToLocalAndCache]);
+        const next = repos.map(repo => 
+            repo.id === repoId ? { ...repo, activeSessionId: sessionId } : repo
+        );
+        saveToLocalAndCache(next);
+    }, [repos, saveToLocalAndCache]);
 
     const clearSession = useCallback((repoId: number) => {
-        setRepos(prev => {
-            const next = prev.map(repo => 
-                repo.id === repoId ? { ...repo, activeSessionId: undefined } : repo
-            );
-            saveToLocalAndCache(next);
-            return next;
-        });
-    }, [saveToLocalAndCache]);
+        const next = repos.map(repo => 
+            repo.id === repoId ? { ...repo, activeSessionId: undefined } : repo
+        );
+        saveToLocalAndCache(next);
+    }, [repos, saveToLocalAndCache]);
 
     // 3. Background Polling for Session Completion
     useEffect(() => {
@@ -156,20 +125,17 @@ export function useStarredRepos() {
 
                         const finalReport = `### 🤖 Jules Architectural Report (${new Date().toLocaleDateString()})\n\n${reportSummary || "Analysis completed successfully. See session for details."}`;
 
-                        setRepos(prev => {
-                            const next = prev.map(r => 
-                                r.id === repo.id 
-                                ? { 
-                                    ...r, 
-                                    notes: r.notes ? `${finalReport}\n\n---\n\n${r.notes}` : finalReport,
-                                    activeSessionId: undefined,
-                                    reviewStatus: "REVIEWED" as ReviewStatus 
-                                  } 
-                                : r
-                            );
-                            saveToLocalAndCache(next);
-                            return next;
-                        });
+                        const next = repos.map(r => 
+                            r.id === repo.id 
+                            ? { 
+                                ...r, 
+                                notes: r.notes ? `${finalReport}\n\n---\n\n${r.notes}` : finalReport,
+                                activeSessionId: undefined,
+                                reviewStatus: "REVIEWED" as ReviewStatus 
+                              } 
+                            : r
+                        );
+                        saveToLocalAndCache(next);
                     } else if (session.state === "FAILED" || session.state === "CANCELLED") {
                         clearSession(repo.id);
                     }
@@ -184,12 +150,11 @@ export function useStarredRepos() {
 
     const unstar = async (repo: StarredRepo) => {
         try {
-            setRepos(prev => prev.filter(r => r.id !== repo.id));
             await githubUnstar(repo.owner.login, repo.name);
             StarredReviewService.deleteReview(repo.id);
+            refetch();
         } catch (err) {
             console.error("Failed to unstar repo", err);
-            fetchStarred();
             throw err;
         }
     };
@@ -203,12 +168,13 @@ export function useStarredRepos() {
 
     return { 
         repos, 
-        loading, 
-        error, 
+        loading: isLoading, 
+        isRevalidating: isFetching,
+        error: error ? (error as Error).message : null, 
         updateReview, 
         unstar,
         bindSession,
         stats, 
-        refetch: fetchStarred 
+        refetch: () => { refetch(); }
     };
 }

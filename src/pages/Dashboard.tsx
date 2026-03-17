@@ -26,9 +26,9 @@ const item = {
 
 export default function Dashboard() {
     const { sessions } = useJules();
-    const { repos, loading: reposLoading } = useGithubRepos();
+    const { repos, loading: reposLoading, isRevalidating: reposRevalidating } = useGithubRepos();
     const { user } = useGithubUser();
-    const { repos: starredRepos, loading: starredLoading, stats: starredStats } = useStarredRepos();
+    const { repos: starredRepos, loading: starredLoading, isRevalidating: starredRevalidating, stats: starredStats } = useStarredRepos();
     const { stats: hfStats, loading: hfLoading } = useHuggingFace();
 
     // Derived Stats
@@ -93,14 +93,14 @@ export default function Dashboard() {
                     value={starredLoading ? <Loader2 className="h-6 w-6 animate-spin text-zinc-500" /> : starredStats.total}
                     color="indigo"
                     trend="up"
-                    trendValue={starredStats.toReview > 0 ? `${starredStats.toReview} pending` : "All reviewed"}
+                    trendValue={starredRevalidating ? "Syncing..." : (starredStats.toReview > 0 ? `${starredStats.toReview} pending` : "All reviewed")}
                 />
                 <StatCard
                     label="Managed Repos"
                     value={reposLoading ? <Loader2 className="h-6 w-6 animate-spin text-zinc-500" /> : repos.length}
                     color="brand"
                     trend="up"
-                    trendValue="Synced"
+                    trendValue={reposRevalidating ? "Syncing..." : "Synced"}
                 />
                 <StatCard
                     label="Jules Console Health"

@@ -23,10 +23,9 @@ interface AppState {
     activeAccount: ProviderProfile | null;
     setActiveAccount: (id: string) => void;
 
-    // Global Cache
+    // Global Cache (Legacy - being replaced by TanStack)
     cache: AppCache;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateCache: (key: keyof AppCache, data: any) => void;
+    updateCache: (key: keyof AppCache, data: unknown) => void;
     clearCache: () => void;
 
     // Auth Status

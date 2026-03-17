@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SessionRow } from "@/components/SessionRow";
 import { useJules } from "@/hooks/useJules";
 import { useGithubRepos } from "@/hooks/useGithubRepos";
+import { useVisibleRange } from "@/hooks/useVisibleRange";
 import { cn } from "@/lib/utils";
 
 const container = {
@@ -42,6 +43,10 @@ export default function Sessions() {
         if (statusFilter === "ALL") return sessions;
         return sessions.filter(s => s.status === statusFilter);
     }, [sessions, statusFilter]);
+
+    // Virtualization
+    const { visibleCount, observerTarget } = useVisibleRange(filteredSessions.length, 20);
+    const visibleSessions = useMemo(() => filteredSessions.slice(0, visibleCount), [filteredSessions, visibleCount]);
 
     const toggleSelectAll = () => {
         if (selectedIds.length === filteredSessions.length) {
@@ -90,9 +95,9 @@ export default function Sessions() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="space-y-8"
+            className="space-y-8 max-w-[1440px] mx-auto"
         >
-            <motion.div variants={item} className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-end">
+            <motion.div variants={item} className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-end px-2">
                 <div>
                     <h2 className="text-4xl font-black tracking-tighter text-glow uppercase">Activity Logs</h2>
                     <p className="text-zinc-500 mt-1 font-medium tracking-tight">Session management and monitoring.</p>
@@ -134,7 +139,7 @@ export default function Sessions() {
             </motion.div>
 
             {/* Filters Bar */}
-            <motion.div variants={item} className="flex items-center gap-3 glass p-2 rounded-2xl border-white/5 overflow-x-auto no-scrollbar">
+            <motion.div variants={item} className="flex items-center gap-3 glass p-2 rounded-2xl border-white/5 overflow-x-auto no-scrollbar mx-2">
                 <div className="flex items-center gap-3 px-4 border-r border-white/10 mr-1 text-zinc-500">
                     <Filter className="h-4 w-4" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Status</span>
@@ -160,7 +165,7 @@ export default function Sessions() {
 
             {/* Error Banner */}
             {sessionError && (
-                <motion.div variants={item} className="bg-rose-500/10 border border-rose-500/20 text-rose-500 p-4 rounded-2xl text-xs font-bold uppercase tracking-widest">
+                <motion.div variants={item} className="mx-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 p-4 rounded-2xl text-xs font-bold uppercase tracking-widest">
                     System Error: {sessionError}
                 </motion.div>
             )}
@@ -172,7 +177,7 @@ export default function Sessions() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden px-2"
                     >
                         <div className="p-8 rounded-3xl border border-primary/20 bg-primary/5 space-y-8 glass mb-8">
                             <div className="flex items-center gap-3">
@@ -245,7 +250,7 @@ export default function Sessions() {
                 )}
             </AnimatePresence>
 
-            <motion.div variants={item} className="space-y-3">
+            <motion.div variants={item} className="space-y-3 px-2">
                 <div className="flex items-center gap-4 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 glass rounded-2xl border-white/5">
                     <input
                         type="checkbox"
@@ -261,28 +266,37 @@ export default function Sessions() {
                 </div>
                 
                 <div className="space-y-3 mt-4">
-                    {filteredSessions.length === 0 ? (
+                    {visibleSessions.length === 0 ? (
                         <div className="text-center py-20 text-zinc-600 glass rounded-3xl border border-dashed border-white/5 font-black uppercase tracking-widest text-xs">
                             {statusFilter === "ALL" ? "No sessions found. Create a new session to get started." : `No sessions found for status: ${statusFilter}`}
                         </div>
                     ) : (
-                        filteredSessions.map(session => (
-                            <div key={session.id} className="flex gap-4 items-center group/row">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedIds.includes(session.id)}
-                                    onChange={() => toggleSelect(session.id)}
-                                    className="ml-6 rounded-lg border-white/10 bg-white/5 text-primary focus:ring-primary/50 h-4 w-4 opacity-30 group-hover/row:opacity-100 transition-opacity"
-                                />
-                                <div className="flex-1">
-                                    <SessionRow
-                                        {...session}
-                                        duration={session.duration || "0s"}
-                                        onCancel={() => handleCancel(session.id)}
+                        <motion.div key="results-container">
+                            {visibleSessions.map(session => (
+                                <div key={session.id} className="flex gap-4 items-center group/row">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(session.id)}
+                                        onChange={() => toggleSelect(session.id)}
+                                        className="ml-6 rounded-lg border-white/10 bg-white/5 text-primary focus:ring-primary/50 h-4 w-4 opacity-30 group-hover/row:opacity-100 transition-opacity"
                                     />
+                                    <div className="flex-1">
+                                        <SessionRow
+                                            {...session}
+                                            duration={session.duration || "0s"}
+                                            onCancel={() => handleCancel(session.id)}
+                                        />
+                                    </div>
                                 </div>
+                            ))}
+                            
+                            {/* Infinity Loading Trigger */}
+                            <div ref={observerTarget} className="h-10 w-full flex items-center justify-center">
+                                {visibleCount < filteredSessions.length && (
+                                    <RefreshCw className="w-6 h-6 animate-spin text-primary/30" />
+                                )}
                             </div>
-                        ))
+                        </motion.div>
                     )}
                 </div>
             </motion.div>

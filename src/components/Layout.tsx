@@ -139,15 +139,15 @@ export default function Layout() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-auto relative">
-                <AnimatePresence mode="wait">
+            <main className="flex-1 overflow-auto relative h-full">
+                <AnimatePresence mode="popLayout" initial={false}>
                     <motion.div
                         key={location.pathname}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0, y: -10, position: "absolute", width: "100%", zIndex: 0 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="p-8 max-w-7xl mx-auto"
+                        className="p-8 max-w-[1440px] mx-auto w-full relative z-10"
                     >
                         <KeyRequiredBanner onOpenSettings={() => setIsSettingsOpen(true)} />
                         <Outlet />

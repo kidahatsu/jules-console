@@ -80,7 +80,7 @@ export interface GithubRepo {
     } | null;
 }
 
-export function mapGithubRepo(r: GithubRepo) {
+export function mapGithubRepo(r: GithubRepo): GithubRepo {
     return {
         id: r.id,
         name: r.name,
@@ -89,9 +89,12 @@ export function mapGithubRepo(r: GithubRepo) {
         html_url: r.html_url,
         clone_url: r.clone_url,
         ssh_url: r.ssh_url,
+        stargazers_count: r.stargazers_count || 0,
+        forks_count: r.forks_count || 0,
         updated_at: r.updated_at,
         default_branch: r.default_branch,
         is_template: r.is_template,
+        language: r.language || null,
         owner: {
             login: r.owner?.login || r.full_name.split("/")[0],
             avatar_url: r.owner?.avatar_url || ""
@@ -105,68 +108,88 @@ export function mapGithubRepo(r: GithubRepo) {
     };
 }
 
-export async function getUserRepos(onIncrementalUpdate?: (repos: Record<string, unknown>[]) => void) {
-    console.log("[getUserRepos] Starting fetch...");
+export async function getUserRepos() {
+    console.log("[getUserRepos] Starting concurrent fetch...");
     try {
         const octokit = getOctokit();
-        let allRepos: Record<string, unknown>[] = [];
-        let page = 1;
-        const MAX_PAGES = 10;
+        const firstPageResponse = await octokit.request("GET /user/repos", {
+            visibility: "all",
+            sort: "updated",
+            per_page: 100,
+            page: 1,
+            t: Date.now(),
+        });
 
-        while (page <= MAX_PAGES) {
-            console.log(`[getUserRepos] Requesting page ${page}...`);
-            const response = await octokit.request("GET /user/repos", {
+        const firstPageRepos = firstPageResponse.data;
+        if (firstPageRepos.length < 100) {
+            return firstPageRepos;
+        }
+
+        // Parallel Fetch: Request pages 2-10 concurrently
+        const PAGE_BATCH_SIZE = 9; // Pages 2 to 10
+        const pagePromises = Array.from({ length: PAGE_BATCH_SIZE }, (_, i) => {
+            const page = i + 2;
+            return octokit.request("GET /user/repos", {
                 visibility: "all",
                 sort: "updated",
                 per_page: 100,
                 page: page,
                 t: Date.now(),
             });
+        });
 
-            const repos = response.data;
-            console.log(`[getUserRepos] Page ${page} returned ${repos.length} repos`);
-            if (repos.length === 0) break;
-            
-            if (onIncrementalUpdate) {
-                onIncrementalUpdate(repos);
-            }
-            
-            allRepos = [...allRepos, ...repos];
-            if (repos.length < 100) break;
-            page++;
-        }
-        return allRepos;
+        const batchResponses = await Promise.all(pagePromises);
+        const additionalRepos = batchResponses.flatMap(res => res.data);
+
+        return [...firstPageRepos, ...additionalRepos].filter(Boolean);
     } catch (error) {
         return handleGithubError(error);
     }
 }
 
-export async function getStarredRepos(onIncrementalUpdate?: (repos: Record<string, unknown>[]) => void) {
+export async function getStarredRepos(onIncrementalUpdate?: (repos: GithubRepo[]) => void) {
     try {
         const octokit = getOctokit();
-        let allRepos: Record<string, unknown>[] = [];
-        let page = 1;
-        const MAX_PAGES = 5;
+        const firstPageResponse = await octokit.request("GET /user/starred", {
+            sort: "created",
+            direction: "desc",
+            per_page: 100,
+            page: 1,
+        });
 
-        while (page <= MAX_PAGES) {
-            const response = await octokit.request("GET /user/starred", {
-                                sort: "created",
+        const firstPageRepos = (firstPageResponse.data as GithubRepo[]) || [];
+        
+        // Notify immediately if callback provided
+        if (onIncrementalUpdate && firstPageRepos.length > 0) {
+            onIncrementalUpdate(firstPageRepos);
+        }
+
+        if (firstPageRepos.length < 100) {
+            return firstPageRepos;
+        }
+
+        // Parallel Fetch: Request pages 2-5 concurrently
+        const PAGE_BATCH_SIZE = 4; // Pages 2 to 5
+        const pagePromises = Array.from({ length: PAGE_BATCH_SIZE }, (_, i) => {
+            const page = i + 2;
+            return octokit.request("GET /user/starred", {
+                sort: "created",
                 direction: "desc",
                 per_page: 100,
                 page: page,
             });
+        });
 
-            const repos = response.data as GithubRepo[];
-            if (!repos || repos.length === 0) break;
+        const batchResponses = await Promise.all(pagePromises);
+        const additionalRepos = batchResponses.flatMap(res => (res.data as GithubRepo[]) || []);
 
-            if (onIncrementalUpdate) {
-                onIncrementalUpdate(repos as unknown as Record<string, unknown>[]);
-            }
-
-            allRepos = [...allRepos, ...(repos as unknown as Record<string, unknown>[])];
-            if (repos.length < 100) break;
-            page++;
+        const allRepos = [...firstPageRepos, ...additionalRepos].filter(Boolean);
+        
+        // Final notification with full list if callback provided
+        if (onIncrementalUpdate) {
+            onIncrementalUpdate(allRepos);
         }
+
         return allRepos;
     } catch (error) {
         return handleGithubError(error);

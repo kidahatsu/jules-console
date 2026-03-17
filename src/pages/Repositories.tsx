@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, BookCopy, Download, Search, Calendar, SortAsc, LayoutGrid, RefreshCw } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useGithubRepos } from "@/hooks/useGithubRepos";
 import type { GithubRepo } from "@/hooks/useGithubRepos";
 import { CreateRepoModal } from "@/components/CreateRepoModal";
 import { RepoCard } from "@/components/RepoCard";
 import { useGridColumns } from "@/hooks/useGridColumns";
+import { useVisibleRange } from "@/hooks/useVisibleRange";
 import { DeletionCautionBanner } from "@/components/DeletionCautionBanner";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ const item = {
 };
 
 export default function Repositories() {
-    const { repos, loading, error, deleteRepo, refetch } = useGithubRepos();
+    const { repos, loading, isRevalidating, error, deleteRepo, refetch } = useGithubRepos();
     const columns = useGridColumns();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -79,6 +80,10 @@ export default function Repositories() {
         return result;
     }, [repos, searchQuery, sortBy]);
 
+    // Virtualization / Lazy-loading
+    const { visibleCount, observerTarget } = useVisibleRange(filteredRepos.length, 24);
+    const visibleRepos = useMemo(() => filteredRepos.slice(0, visibleCount), [filteredRepos, visibleCount]);
+
     if (loading && repos.length === 0) {
         return (
             <div className="space-y-8 max-w-[1440px] mx-auto">
@@ -126,12 +131,12 @@ export default function Repositories() {
 
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => refetch(true)}
-                        disabled={loading}
+                        onClick={() => refetch()}
+                        disabled={loading || isRevalidating}
                         className="p-3 bg-white/5 border border-white/5 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
                         title="Sync Repositories"
                     >
-                        <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`h-4 w-4 ${loading || isRevalidating ? "animate-spin" : ""}`} />
                     </button>
 
                     <div className="relative" ref={dropdownRef}>
@@ -213,34 +218,59 @@ export default function Repositories() {
 
             <DeletionCautionBanner />
 
-            {filteredRepos.length === 0 ? (
-                <motion.div variants={item} className="flex flex-col items-center justify-center py-32 text-center glass rounded-3xl border-dashed border-white/10 mx-2">
-                    <div className="p-6 bg-white/5 rounded-3xl mb-6">
-                        <LayoutGrid className="w-10 h-10 text-zinc-700" />
-                    </div>
-                    <h3 className="text-xl font-black tracking-tight text-zinc-300 uppercase">No Repositories Found</h3>
-                    <p className="text-zinc-500 mt-2 max-w-sm font-medium">
-                        {searchQuery ? `No matches found for "${searchQuery}"` : "Awaiting initial repository synchronization."}
-                    </p>
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="mt-6 text-xs font-black uppercase tracking-widest text-primary hover:text-indigo-400 transition-colors"
+            <AnimatePresence mode="popLayout">
+                {visibleRepos.length === 0 ? (
+                    <motion.div 
+                        key="empty"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        variants={item} 
+                        className="flex flex-col items-center justify-center py-32 text-center glass rounded-3xl border-dashed border-white/10 mx-2"
+                    >
+                        <div className="p-6 bg-white/5 rounded-3xl mb-6">
+                            <LayoutGrid className="w-10 h-10 text-zinc-700" />
+                        </div>
+                        <h3 className="text-xl font-black tracking-tight text-zinc-300 uppercase">No Repositories Found</h3>
+                        <p className="text-zinc-500 mt-2 max-w-sm font-medium">
+                            {searchQuery ? `No matches found for "${searchQuery}"` : "Awaiting initial repository synchronization."}
+                        </p>
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="mt-6 text-xs font-black uppercase tracking-widest text-primary hover:text-indigo-400 transition-colors"
+                            >
+                                Clear Search
+                            </button>
+                        )}
+                    </motion.div>
+                ) : (
+                    <motion.div key="results-container">
+                        <motion.div 
+                            key="grid"
+                            layout
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className={cn(
+                                "grid gap-6 px-2",
+                                columns === 3 ? "grid-cols-3" : columns === 2 ? "grid-cols-2" : "grid-cols-1"
+                            )}
                         >
-                            Clear Search
-                        </button>
-                    )}
-                </motion.div>
-            ) : (
-                <div className={cn(
-                    "grid gap-6 px-2",
-                    columns === 3 ? "grid-cols-3" : columns === 2 ? "grid-cols-2" : "grid-cols-1"
-                )}>
-                    {filteredRepos.map(repo => (
-                        <RepoCard key={repo.id} repo={repo} onDelete={deleteRepo} onCloneToNew={handleCloneToNew} />
-                    ))}
-                </div>
-            )}
+                            {visibleRepos.map(repo => (
+                                <RepoCard key={repo.id} repo={repo} onDelete={deleteRepo} onCloneToNew={handleCloneToNew} />
+                            ))}
+                        </motion.div>
+                        
+                        {/* Infinity Loading Trigger */}
+                        <div ref={observerTarget} className="h-10 w-full flex items-center justify-center">
+                            {visibleCount < filteredRepos.length && (
+                                <RefreshCw className="w-6 h-6 animate-spin text-primary/30" />
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <CreateRepoModal
                 isOpen={isCreateModalOpen}
@@ -249,7 +279,7 @@ export default function Repositories() {
                     setInitialTemplate(null);
                 }}
                 onSuccess={() => {
-                    refetch(true);
+                    refetch();
                 }}
                 initialTemplate={initialTemplate}
             />

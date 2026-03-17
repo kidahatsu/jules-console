@@ -3,12 +3,28 @@ import { Star, Search, Filter, RefreshCw, BookOpen, AlertCircle, SortAsc, Code2 
 import { motion, AnimatePresence } from "framer-motion";
 import { useStarredRepos, type ReviewStatus } from "@/hooks/useStarredRepos";
 import { useGridColumns } from "@/hooks/useGridColumns";
+import { useVisibleRange } from "@/hooks/useVisibleRange";
 import { StarredRepoCard } from "@/components/StarredRepoCard";
 import { StatCard } from "@/components/StatCard";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = ReviewStatus | "ALL";
 type SortOption = "updated" | "stars" | "name" | "newest_starred";
+
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+};
+
+const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+};
 
 export default function StarredRepos() {
     const { repos, loading, error, updateReview, unstar, stats, refetch, bindSession } = useStarredRepos();
@@ -61,6 +77,10 @@ export default function StarredRepos() {
         return result;
     }, [repos, searchQuery, statusFilter, languageFilter, sortBy]);
 
+    // Virtualization / Lazy-loading for high-performance rendering
+    const { visibleCount, observerTarget } = useVisibleRange(filteredAndSortedRepos.length, 24);
+    const visibleRepos = useMemo(() => filteredAndSortedRepos.slice(0, visibleCount), [filteredAndSortedRepos, visibleCount]);
+
     if (loading && repos.length === 0) {
         return (
             <div className="space-y-8 animate-in fade-in duration-500 max-w-[1440px] mx-auto">
@@ -110,12 +130,17 @@ export default function StarredRepos() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-[1440px] mx-auto">
+        <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-8 max-w-[1440px] mx-auto"
+        >
             <title>Starred Repositories | Curation Pipeline</title>
             <meta name="description" content="Curation and analysis of your external repositories." />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+            <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                 <div>
                     <div className="flex items-center gap-2 text-primary font-bold text-xs tracking-widest uppercase mb-2">
                         <Star className="w-3.5 h-3.5 fill-primary" />
@@ -161,10 +186,10 @@ export default function StarredRepos() {
                         />
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-2">
+            <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 px-2">
                 <StatCard 
                     label="Synced Stars"
                     value={stats.total}
@@ -193,10 +218,10 @@ export default function StarredRepos() {
                     trend="neutral"
                     trendValue="Efficiency"
                 />
-            </div>
+            </motion.div>
 
             {/* Enhanced Controls Bar */}
-            <div className="flex flex-col xl:flex-row gap-4 px-2">
+            <motion.div variants={item} className="flex flex-col xl:flex-row gap-4 px-2">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
                     <input
@@ -246,14 +271,17 @@ export default function StarredRepos() {
                         <span>{filteredAndSortedRepos.length} Results</span>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Grid */}
             <AnimatePresence mode="popLayout">
-                {filteredAndSortedRepos.length === 0 ? (
+                {visibleRepos.length === 0 ? (
                     <motion.div 
+                        key="empty"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        variants={item}
                         className="flex flex-col items-center justify-center py-32 text-center glass rounded-[3rem] border-dashed border-white/5"
                     >
                         <div className="p-8 bg-white/5 rounded-full mb-8 border border-white/5 shadow-inner">
@@ -271,26 +299,39 @@ export default function StarredRepos() {
                         </button>
                     </motion.div>
                 ) : (
-                    <motion.div 
-                        layout
-                        className={cn(
-                            "grid gap-8 px-2 pb-20",
-                            columns === 3 ? "grid-cols-3" : columns === 2 ? "grid-cols-2" : "grid-cols-1"
-                        )}
-                    >
-                        {filteredAndSortedRepos.map(repo => (
-                            <StarredRepoCard 
-                                key={repo.id} 
-                                repo={repo} 
-                                onUpdateReview={updateReview} 
-                                onUnstar={unstar}
-                                onBindSession={bindSession}
-                            />
-                        ))}
+                    <motion.div key="results-container">
+                        <motion.div 
+                            key="grid"
+                            layout
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className={cn(
+                                "grid gap-8 px-2 pb-20",
+                                columns === 3 ? "grid-cols-3" : columns === 2 ? "grid-cols-2" : "grid-cols-1"
+                            )}
+                        >
+                            {visibleRepos.map(repo => (
+                                <StarredRepoCard 
+                                    key={repo.id} 
+                                    repo={repo} 
+                                    onUpdateReview={updateReview} 
+                                    onUnstar={unstar}
+                                    onBindSession={bindSession}
+                                />
+                            ))}
+                        </motion.div>
+                        
+                        {/* Infinity Loading Trigger */}
+                        <div ref={observerTarget} className="h-10 w-full flex items-center justify-center">
+                            {visibleCount < filteredAndSortedRepos.length && (
+                                <RefreshCw className="w-6 h-6 animate-spin text-primary/30" />
+                            )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </motion.div>
     );
 }
 

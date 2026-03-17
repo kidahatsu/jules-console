@@ -8,6 +8,21 @@ import { cn } from "@/lib/utils";
 type SourceFilter = "ALL" | "GITHUB" | "HUGGINGFACE";
 type CategoryFilter = "ALL" | "MENTION" | "REVIEW" | "SECURITY";
 
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+};
+
+const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+};
+
 export default function Inbox() {
     const { notifications, loading, error, refetch, markRead, markAllRead, unsubscribe, fetchDetail } = useInbox();
     const [selectedNotification, setSelectedNotification] = useState<UnifiedNotification | null>(null);
@@ -59,12 +74,17 @@ export default function Inbox() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-20">
+        <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-8 max-w-[1200px] mx-auto pb-20"
+        >
             <title>Inbox | Notifications</title>
             <meta name="description" content="Aggregated notifications from GitHub and Hugging Face." />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+            <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                 <div>
                     <div className="flex items-center gap-2 text-primary font-bold text-xs tracking-widest uppercase mb-2">
                         <InboxIcon className="w-3.5 h-3.5" />
@@ -92,10 +112,10 @@ export default function Inbox() {
                         <RefreshCw className={`w-5 h-5 group-active:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Filter Bar */}
-            <div className="flex flex-col xl:flex-row gap-4 px-2">
+            <motion.div variants={item} className="flex flex-col xl:flex-row gap-4 px-2">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
                     <input
@@ -115,18 +135,18 @@ export default function Inbox() {
                     <FilterTab active={categoryFilter === "REVIEW"} onClick={() => setCategoryFilter(categoryFilter === "REVIEW" ? "ALL" : "REVIEW")} icon={<BellRing className="w-3 h-3" />} />
                     <FilterTab active={categoryFilter === "SECURITY"} onClick={() => setCategoryFilter(categoryFilter === "SECURITY" ? "ALL" : "SECURITY")} icon={<ShieldAlert className="w-3 h-3 text-rose-500" />} />
                 </div>
-            </div>
+            </motion.div>
 
             {/* List */}
-            <div className="space-y-3 px-2">
+            <motion.div variants={item} className="space-y-3 px-2">
                 <AnimatePresence mode="popLayout">
                     {error ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-rose-500 bg-rose-500/5 border border-rose-500/10 rounded-3xl">
+                        <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-rose-500 bg-rose-500/5 border border-rose-500/10 rounded-3xl">
                             <AlertCircle className="w-12 h-12 mx-auto mb-4" />
                             <p className="font-bold">{error}</p>
                         </motion.div>
                     ) : filteredNotifications.length === 0 ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32 text-center glass rounded-[3rem] border-dashed border-white/5">
+                        <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32 text-center glass rounded-[3rem] border-dashed border-white/5">
                             <CheckCircle2 className="w-16 h-16 text-emerald-500/20 mx-auto mb-8" />
                             <h3 className="text-2xl font-black text-white tracking-tight">No Notifications</h3>
                             <p className="text-zinc-500 mt-2 font-medium">No active communications detected in your monitored channels.</p>
@@ -145,7 +165,7 @@ export default function Inbox() {
                         ))
                     )}
                 </AnimatePresence>
-            </div>
+            </motion.div>
 
             <JulesActionModal 
                 isOpen={isJulesModalOpen}
@@ -158,6 +178,9 @@ export default function Inbox() {
                     html_url: selectedNotification.url,
                     clone_url: "", // Force repoless/insight mode
                     ssh_url: "",
+                    stargazers_count: 0,
+                    forks_count: 0,
+                    language: "Inbox",
                     updated_at: selectedNotification.createdAt,
                     default_branch: "main",
                     is_template: false,
@@ -174,7 +197,7 @@ export default function Inbox() {
                     body: selectedNotification.body
                 } : undefined}
             />
-        </div>
+        </motion.div>
     );
 }
 

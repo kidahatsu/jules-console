@@ -109,7 +109,12 @@ export const StarredRepoCard = memo(function StarredRepoCard({ repo, onUpdateRev
                 <div className="flex items-start gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="relative shrink-0">
-                            <img src={repo.owner.avatar_url} alt={repo.owner.login} className="w-10 h-10 rounded-xl border border-white/10 shadow-lg group-hover:scale-105 transition-transform" />
+                            <img 
+                                src={`${repo.owner.avatar_url}${repo.owner.avatar_url.includes('?') ? '&' : '?'}s=64`} 
+                                alt={repo.owner.login} 
+                                className="w-10 h-10 rounded-xl border border-white/10 shadow-lg group-hover:scale-105 transition-transform" 
+                                loading="lazy"
+                            />
                             <div className={cn(
                                 "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-zinc-900 shadow-sm",
                                 repo.reviewStatus === "REVIEWED" ? "bg-emerald-500" : repo.reviewStatus === "REJECTED" ? "bg-rose-500" : "bg-amber-500"
@@ -329,16 +334,20 @@ export const StarredRepoCard = memo(function StarredRepoCard({ repo, onUpdateRev
                         full_name: repo.full_name,
                         description: repo.description,
                         html_url: repo.html_url,
-                        clone_url: "", 
-                        ssh_url: "",
+                        clone_url: repo.clone_url,
+                        ssh_url: repo.ssh_url,
                         updated_at: repo.updated_at,
                         default_branch: repo.default_branch,
                         is_template: false,
+                        stargazers_count: repo.stargazers_count,
+                        forks_count: 0,
+                        language: repo.language,
                         owner: {
                             login: repo.owner.login,
                             avatar_url: repo.owner.avatar_url
                         }
                     }}
+
                     onSessionStarted={(sessionId) => {
                         onBindSession?.(repo.id, sessionId);
                     }}

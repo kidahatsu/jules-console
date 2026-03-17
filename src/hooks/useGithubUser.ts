@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/github";
 import { useStore } from "@/lib/store";
 
 export interface GithubUser {
-    // ... GithubUser interface ...
     login: string;
     id: number;
     avatar_url: string;
@@ -22,35 +21,17 @@ export interface GithubUser {
 
 export function useGithubUser() {
     const activeAccount = useStore(state => state.activeAccount);
-    const [user, setUser] = useState<GithubUser | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            if (!activeAccount?.githubToken) {
-                setUser(null);
-                setLoading(false);
-                return;
-            }
+    const { data: user = null, isLoading, error } = useQuery({
+        queryKey: ["github-user", activeAccount?.id],
+        queryFn: async () => {
+            if (!activeAccount?.githubToken) return null;
+            const data = await getUserProfile();
+            return data as GithubUser;
+        },
+        enabled: !!activeAccount?.githubToken,
+        staleTime: 60 * 60 * 1000, // User profile is quite stable, 1 hour
+    });
 
-            setLoading(true);
-            try {
-                const data = await getUserProfile();
-                if (data) {
-                    setUser(data as GithubUser);
-                } else {
-                    setError("Failed to load user profile");
-                }
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to fetch user");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUser();
-    }, [activeAccount]);
-
-    return { user, loading, error };
+    return { user, loading: isLoading, error: error ? (error as Error).message : null };
 }

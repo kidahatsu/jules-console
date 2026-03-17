@@ -11,6 +11,21 @@ import { type HFModel, type HFSpace } from "@/lib/huggingface";
 
 type AssetTypeFilter = "ALL" | "MODEL" | "SPACE";
 
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+};
+
 export default function HuggingFace() {
     const { models, spaces, loading, error, refetch, stats } = useHuggingFace();
     const [searchQuery, setSearchQuery] = useState("");
@@ -52,12 +67,17 @@ export default function HuggingFace() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-[1440px] mx-auto">
+        <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-8 max-w-[1440px] mx-auto"
+        >
             <title>Hugging Face | AI Intelligence</title>
             <meta name="description" content="Manage and audit your Hugging Face models and spaces." />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+            <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                 <div>
                     <div className="flex items-center gap-2 text-amber-500 font-bold text-xs tracking-widest uppercase mb-2">
                         <Cpu className="w-3.5 h-3.5" />
@@ -102,10 +122,10 @@ export default function HuggingFace() {
                         />
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-2">
+            <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-4 gap-6 px-2">
                 <StatCard 
                     label="Active Spaces"
                     value={stats.activeSpaces}
@@ -134,10 +154,10 @@ export default function HuggingFace() {
                     trend="neutral"
                     trendValue="Operational"
                 />
-            </div>
+            </motion.div>
 
             {/* Controls */}
-            <div className="px-2">
+            <motion.div variants={item} className="px-2">
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
                     <input
@@ -148,14 +168,16 @@ export default function HuggingFace() {
                         className="w-full pl-11 pr-4 py-4 bg-black/40 border border-white/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm placeholder:text-zinc-600 shadow-2xl backdrop-blur-xl transition-all font-medium"
                     />
                 </div>
-            </div>
+            </motion.div>
 
             {/* Grid */}
             <AnimatePresence mode="popLayout">
                 {error ? (
                     <motion.div 
+                        key="error"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="flex flex-col items-center justify-center py-20 text-center px-4"
                     >
                         <AlertCircle className="w-16 h-16 text-rose-500 mb-6" />
@@ -164,8 +186,10 @@ export default function HuggingFace() {
                     </motion.div>
                 ) : filteredAssets.length === 0 ? (
                     <motion.div 
+                        key="empty"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="flex flex-col items-center justify-center py-32 text-center glass rounded-[3rem] border-dashed border-white/5"
                     >
                         <BookOpen className="w-16 h-16 text-zinc-800 mb-8" />
@@ -174,7 +198,11 @@ export default function HuggingFace() {
                     </motion.div>
                 ) : (
                     <motion.div 
+                        key="grid"
                         layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-2 pb-20"
                     >
                         {filteredAssets.map(asset => (
@@ -200,6 +228,9 @@ export default function HuggingFace() {
                     html_url: selectedUrl,
                     clone_url: "",
                     ssh_url: "",
+                    stargazers_count: 0,
+                    forks_count: 0,
+                    language: "AI",
                     updated_at: new Date().toISOString(),
                     default_branch: "main",
                     is_template: false,
@@ -209,6 +240,6 @@ export default function HuggingFace() {
                     }
                 }}
             />
-        </div>
+        </motion.div>
     );
 }
