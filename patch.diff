@@ -1,0 +1,16 @@
+<<<<<<< SEARCH
+    // Reset when total items change significantly (e.g. filter change)
+    useEffect(() => {
+        setVisibleCount(itemsPerBatch);
+    }, [totalItems, itemsPerBatch]);
+=======
+    const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
+    const [prevItemsPerBatch, setPrevItemsPerBatch] = useState(itemsPerBatch);
+
+    // Reset when total items change significantly (e.g. filter change)
+    if (totalItems !== prevTotalItems || itemsPerBatch !== prevItemsPerBatch) {
+        setVisibleCount(itemsPerBatch);
+        setPrevTotalItems(totalItems);
+        setPrevItemsPerBatch(itemsPerBatch);
+    }
+>>>>>>> REPLACE

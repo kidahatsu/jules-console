@@ -28,10 +28,15 @@ export function useVisibleRange(totalItems: number, itemsPerBatch: number = 12) 
         return () => observer.disconnect();
     }, [loadMore]);
 
+    const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
+    const [prevItemsPerBatch, setPrevItemsPerBatch] = useState(itemsPerBatch);
+
     // Reset when total items change significantly (e.g. filter change)
-    useEffect(() => {
+    if (totalItems !== prevTotalItems || itemsPerBatch !== prevItemsPerBatch) {
         setVisibleCount(itemsPerBatch);
-    }, [totalItems, itemsPerBatch]);
+        setPrevTotalItems(totalItems);
+        setPrevItemsPerBatch(itemsPerBatch);
+    }
 
     return { visibleCount, observerTarget };
 }
