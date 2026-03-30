@@ -29,9 +29,12 @@ export function useVisibleRange(totalItems: number, itemsPerBatch: number = 12) 
     }, [loadMore]);
 
     // Reset when total items change significantly (e.g. filter change)
-    useEffect(() => {
+    // Note: We track totalItems in state to reset visibleCount when totalItems change
+    const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
+    if (prevTotalItems !== totalItems) {
+        setPrevTotalItems(totalItems);
         setVisibleCount(itemsPerBatch);
-    }, [totalItems, itemsPerBatch]);
+    }
 
     return { visibleCount, observerTarget };
 }
