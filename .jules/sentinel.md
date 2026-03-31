@@ -1,0 +1,4 @@
+## 2024-05-14 - Fix XSS vulnerability in react-markdown rendering
+**Vulnerability:** User-provided or external text (repository notes, session prompts) is rendered as markdown via `react-markdown` without explicit sanitization, potentially allowing Cross-Site Scripting (XSS).
+**Learning:** While `react-markdown` is relatively safe by default (it escapes HTML unless `rehype-raw` is used), explicitly adding `rehype-sanitize` is an excellent industry-standard security practice. It ensures that even if custom plugins generate unsafe nodes, they will be stripped.
+**Prevention:** Always use `rehype-sanitize` as a plugin for `react-markdown` when rendering user-provided or external text.
