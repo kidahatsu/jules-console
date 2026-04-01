@@ -3,6 +3,7 @@ import { X, Star, ExternalLink, MessageSquare, CheckCircle2, XCircle, Save, Cale
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import type { StarredRepo, ReviewStatus } from "@/hooks/useStarredRepos";
 import { extractSessionId } from "@/lib/utils";
 
@@ -228,7 +229,7 @@ export function StarredRepoDetailModal({ isOpen, onClose, repo, onUpdateReview, 
                                     <span className="text-xs font-black uppercase tracking-widest">Rendered Analysis</span>
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none bg-zinc-900/30 rounded-3xl p-8 border border-white/5 shadow-inner">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                                         {notes || "*No intelligence data provided. Use Jules to generate an architectural report.*"}
                                     </ReactMarkdown>
                                 </div>

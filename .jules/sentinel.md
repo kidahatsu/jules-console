@@ -1,0 +1,4 @@
+## 2025-02-13 - Add rehype-sanitize for XSS Protection in React Markdown
+**Vulnerability:** Potential XSS vulnerabilities when rendering user-supplied or untrusted markdown content using `react-markdown` without proper sanitization.
+**Learning:** By default, `react-markdown` does not sanitize HTML inputs completely. A specific plugin like `rehype-sanitize` is necessary to scrub dangerous HTML tags and attributes to prevent malicious code execution.
+**Prevention:** Always include the `rehype-sanitize` plugin in the `rehypePlugins` array whenever using `react-markdown` to render potentially untrusted markdown content.
