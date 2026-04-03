@@ -87,17 +87,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         reader.onload = (event) => {
             try {
                 const imported = JSON.parse(event.target?.result as string);
-                const schema = z.array(ProviderProfileSchema);
-                const result = schema.safeParse(imported);
+                const result = z.array(ProviderProfileSchema).safeParse(imported);
                 if (result.success) {
-                    setAccounts(result.data);
+                    setAccounts(result.data as ProviderProfile[]);
                     setError(null);
                 } else {
                     // Security enhancement: Validate imported data schema to prevent injection
-                    setError("Invalid repoGroup file format.");
+                    setError("Invalid profile file format: " + result.error.issues[0].message);
                 }
             } catch {
-                setError("Failed to parse repoGroup file.");
+                setError("Failed to parse profile file.");
             }
         };
         reader.readAsText(file);
