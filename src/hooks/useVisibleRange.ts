@@ -30,6 +30,7 @@ export function useVisibleRange(totalItems: number, itemsPerBatch: number = 12) 
 
     // Reset when total items change significantly (e.g. filter change)
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setVisibleCount(itemsPerBatch);
     }, [totalItems, itemsPerBatch]);
 
