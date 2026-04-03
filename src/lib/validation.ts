@@ -7,8 +7,8 @@ export const ProviderProfileSchema = z.object({
     id: z.string().uuid().or(z.literal("default")),
     name: z.string().min(2, "Account name must be at least 2 characters"),
     apiKey: z.string().min(10, "Google API Key is required and must be valid"),
-    githubToken: z.string().optional(),
-    hfToken: z.string().optional(),
+    githubToken: z.string().optional().default(""),
+    hfToken: z.string().optional().default(""),
     isActive: z.boolean(),
 });
 

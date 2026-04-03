@@ -6,6 +6,7 @@ import { testHFToken } from "@/lib/huggingface";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { ProviderProfileSchema } from "@/lib/validation";
+import { z } from "zod";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -86,10 +87,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         reader.onload = (event) => {
             try {
                 const imported = JSON.parse(event.target?.result as string);
-                if (Array.isArray(imported)) {
-                    setAccounts(imported);
+                const schema = z.array(ProviderProfileSchema);
+                const result = schema.safeParse(imported);
+                if (result.success) {
+                    setAccounts(result.data);
                     setError(null);
                 } else {
+                    // Security enhancement: Validate imported data schema to prevent injection
                     setError("Invalid repoGroup file format.");
                 }
             } catch {
