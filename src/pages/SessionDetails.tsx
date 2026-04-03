@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, GitBranch, Calendar, Clock, Terminal, XCircle, Ban,
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import { getJulesSession, getJulesActivities, type JulesSession, type Activity } from "@/lib/jules";
 import { cn } from "@/lib/utils";
 import { SessionTimeline } from "@/components/SessionTimeline";
@@ -118,7 +119,8 @@ export default function SessionDetails() {
                                 <Terminal className="h-32 w-32" />
                             </div>
                             <div className="prose prose-invert prose-sm max-w-none relative z-10 prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-300">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {/* 🛡️ Sentinel: added rehype-sanitize to prevent XSS from user-supplied markdown */}
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                                     {session.prompt || session.title || "Untitled Session"}
                                 </ReactMarkdown>
                             </div>
