@@ -105,7 +105,7 @@ export function useInbox() {
                 if (err?.status === 401 || err?.status === 403) {
                     setTokenStatus("github", "invalid");
                 } else {
-                    console.error("GitHub Fetch Error:", results[0].reason);
+                    console.error("GitHub Fetch Error:", results[0].reason instanceof Error ? results[0].reason.message : "Unknown error");
                 }
                 fetchErrors.push("GitHub signals offline.");
             }
@@ -132,7 +132,7 @@ export function useInbox() {
                 if (err?.status === 401 || err?.status === 403) {
                     setTokenStatus("hf", "insufficient_permissions");
                 } else {
-                    console.error("HF Fetch Error:", results[1].reason);
+                    console.error("HF Fetch Error:", results[1].reason instanceof Error ? results[1].reason.message : "Unknown error");
                 }
                 fetchErrors.push("HF discussions offline.");
             }
@@ -145,7 +145,7 @@ export function useInbox() {
             updateCache("inbox", combined);
             setError(fetchErrors.length > 0 ? fetchErrors.join(" ") : null);
         } catch (err) {
-            console.error("Inbox Fetch Error:", err);
+            console.error("Inbox Fetch Error:", err instanceof Error ? err.message : "Unknown error");
             setError("Unexpected inbox failure.");
         } finally {
             setLoading(false);
