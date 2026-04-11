@@ -120,7 +120,17 @@ export default function SessionDetails() {
                             </div>
                             <div className="prose prose-invert prose-sm max-w-none relative z-10 prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-300">
                                 {/* Security: Prevent XSS by sanitizing markdown with rehype-sanitize */}
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                {/* Security: Prevent reverse tabnabbing by using target="_blank" and rel="noopener noreferrer" for external links */}
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    rehypePlugins={[rehypeSanitize]}
+                                    components={{
+                                        a: (props) => {
+                                            const { href, children, title } = props;
+                                            return <a href={href} title={title} target="_blank" rel="noopener noreferrer">{children}</a>;
+                                        },
+                                    }}
+                                >
                                     {session.prompt || session.title || "Untitled Session"}
                                 </ReactMarkdown>
                             </div>
