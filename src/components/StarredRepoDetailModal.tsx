@@ -230,7 +230,17 @@ export function StarredRepoDetailModal({ isOpen, onClose, repo, onUpdateReview, 
                                 </div>
                                 <div className="prose prose-invert prose-sm max-w-none bg-zinc-900/30 rounded-3xl p-8 border border-white/5 shadow-inner">
                                     {/* Security: Prevent XSS by sanitizing markdown with rehype-sanitize */}
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        rehypePlugins={[rehypeSanitize]}
+                                        components={{
+                                            a: (props) => {
+                                                const aProps = { ...props };
+                                                delete (aProps as Record<string, unknown>).node;
+                                                return <a {...aProps} target="_blank" rel="noopener noreferrer" />;
+                                            }
+                                        }}
+                                    >
                                         {notes || "*No intelligence data provided. Use Jules to generate an architectural report.*"}
                                     </ReactMarkdown>
                                 </div>
