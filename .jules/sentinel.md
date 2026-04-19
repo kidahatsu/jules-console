@@ -1,3 +1,8 @@
+## 2025-02-18 - [MEDIUM] Fix Reverse Tabnabbing in Markdown Rendering
+**Vulnerability:** `react-markdown` was configured without a custom link renderer, which meant if users provided links (and if rendered with `target="_blank"` natively by some plugins/defaults), the newly opened window could gain `window.opener` access to the parent application, enabling reverse tabnabbing.
+**Learning:** Even when using sanitizers like `rehype-sanitize` to prevent XSS, external links parsed from markdown still pose a threat if they open in a new tab without proper `rel` attributes.
+**Prevention:** Always customize the `a` tag via the `components` prop in `ReactMarkdown` to include `target="_blank" rel="noopener noreferrer"` to prevent the new page from accessing the origin window.
+
 ## 2025-02-17 - [CRITICAL] Fix XSS Vulnerability in Markdown Rendering
 **Vulnerability:** The application was using `react-markdown` to render user-provided input without sanitizing the output, making it vulnerable to Cross-Site Scripting (XSS).
 **Learning:** We render untrusted user input using `react-markdown` in places such as `StarredRepoDetailModal.tsx` and `SessionDetails.tsx`. We must assume any notes or session prompt data could be malicious.
