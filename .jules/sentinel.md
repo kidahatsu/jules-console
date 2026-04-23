@@ -1,3 +1,8 @@
+## 2025-02-17 - [CRITICAL] Fix Reverse Tabnabbing Vulnerability in Markdown Rendering
+**Vulnerability:** The application was using `react-markdown` without customizing the `a` tag, meaning any external links rendered from user input could expose a reverse tabnabbing vulnerability. If a user clicks a malicious link, the newly opened tab can use `window.opener` to redirect the original tab to a phishing page.
+**Learning:** Even when using `rehype-sanitize` to prevent XSS, `react-markdown` does not automatically add `target="_blank" rel="noopener noreferrer"` to external links.
+**Prevention:** When configuring `ReactMarkdown` to render external links, always customize the `a` tag via the `components` prop to include `target="_blank" rel="noopener noreferrer"` to prevent reverse tabnabbing vulnerabilities. Destructure the `node` prop to prevent it from being passed to the DOM element, and use `// eslint-disable-next-line @typescript-eslint/no-unused-vars` to bypass the strict ESLint rule against unused variables.
+
 ## 2025-02-17 - [CRITICAL] Fix XSS Vulnerability in Markdown Rendering
 **Vulnerability:** The application was using `react-markdown` to render user-provided input without sanitizing the output, making it vulnerable to Cross-Site Scripting (XSS).
 **Learning:** We render untrusted user input using `react-markdown` in places such as `StarredRepoDetailModal.tsx` and `SessionDetails.tsx`. We must assume any notes or session prompt data could be malicious.
