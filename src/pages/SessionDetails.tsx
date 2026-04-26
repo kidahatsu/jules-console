@@ -120,7 +120,17 @@ export default function SessionDetails() {
                             </div>
                             <div className="prose prose-invert prose-sm max-w-none relative z-10 prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-300">
                                 {/* Security: Prevent XSS by sanitizing markdown with rehype-sanitize */}
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    rehypePlugins={[rehypeSanitize]}
+                                    components={{
+                                        a: ({ node, ...props }) => {
+                                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                            const { node: _, ...rest } = { node, ...props };
+                                            return <a {...rest} target="_blank" rel="noopener noreferrer" />;
+                                        }
+                                    }}
+                                >
                                     {session.prompt || session.title || "Untitled Session"}
                                 </ReactMarkdown>
                             </div>
