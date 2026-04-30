@@ -12,3 +12,8 @@
 **Vulnerability:** Import functionality for user configuration (identity profiles) in `src/components/SettingsModal.tsx` parsed user-uploaded JSON and directly injected it into application state without validating the structure or contents of the payload.
 **Learning:** React applications that accept JSON configurations must treat uploaded files as untrusted input, the same as API requests or form data. Directly setting application state from unvalidated JSON exposes the app to state corruption and potential configuration injection attacks.
 **Prevention:** Always validate uploaded configuration files against a strict schema (like Zod) before deserializing and applying the data to application state.
+
+## 2025-04-30 - [MEDIUM] Reverse Tabnabbing Vulnerability in Markdown Links
+**Vulnerability:** External links rendered by `react-markdown` were lacking `target="_blank"` and `rel="noopener noreferrer"`. This could allow a malicious linked site to gain access to the `window.opener` object and potentially navigate the user's origin tab to a phishing page (Reverse Tabnabbing).
+**Learning:** Even though `rehype-sanitize` prevents XSS by stripping malicious tags and attributes, it doesn't automatically add `target` and `rel` attributes to anchor tags created from markdown text.
+**Prevention:** Always configure `ReactMarkdown` with custom components for the `a` tag to explicitly set `target="_blank"` and `rel="noopener noreferrer"`.
