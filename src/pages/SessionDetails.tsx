@@ -124,10 +124,8 @@ export default function SessionDetails() {
                                     remarkPlugins={[remarkGfm]}
                                     rehypePlugins={[rehypeSanitize]}
                                     components={{
+                                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                         a: ({ node, ...props }) => {
-                                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                            // @ts-expect-error - node is removed from props to prevent React warning
-                                            const _node = node;
                                             return <a {...props} target="_blank" rel="noopener noreferrer" />;
                                         }
                                     }}
