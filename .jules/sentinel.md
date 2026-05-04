@@ -12,3 +12,8 @@
 **Vulnerability:** Import functionality for user configuration (identity profiles) in `src/components/SettingsModal.tsx` parsed user-uploaded JSON and directly injected it into application state without validating the structure or contents of the payload.
 **Learning:** React applications that accept JSON configurations must treat uploaded files as untrusted input, the same as API requests or form data. Directly setting application state from unvalidated JSON exposes the app to state corruption and potential configuration injection attacks.
 **Prevention:** Always validate uploaded configuration files against a strict schema (like Zod) before deserializing and applying the data to application state.
+
+## 2024-05-04 - [HIGH] Fix Reverse Tabnabbing in Markdown Rendering
+**Vulnerability:** The application used `react-markdown` to render user-provided input with default link behavior. External links clicked from this markdown did not use `rel="noopener noreferrer"`, exposing the application to reverse tabnabbing attacks where the newly opened window could manipulate the `window.opener` of the originating application.
+**Learning:** When using `react-markdown` to render external links, default anchor tags (`<a>`) are generated. These do not automatically include security attributes for cross-origin links, leaving the app open to reverse tabnabbing.
+**Prevention:** Always customize the `a` tag via the `components` prop in `ReactMarkdown` to include `target="_blank" rel="noopener noreferrer"`. Additionally, when doing this, ensure the `node` prop is destructured and excluded from being passed directly to the DOM element (bypassing the strict unused variable ESLint rule using a disable comment if necessary).
