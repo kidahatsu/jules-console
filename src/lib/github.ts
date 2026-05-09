@@ -32,7 +32,7 @@ function handleGithubError(error: unknown): never {
 
     // Only log actual API errors, not missing token checks
     if (ghError.status !== 401 && ghError.status !== 403) {
-        console.error("GitHub API Error:", ghError.message || ghError);
+        console.error(`GitHub API Error [${ghError.status || "Unknown"}]: ${ghError.message || "Unknown error"}`);
     }
     
     const status = ghError.status;

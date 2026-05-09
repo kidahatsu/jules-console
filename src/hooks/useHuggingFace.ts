@@ -71,7 +71,7 @@ export function useHuggingFace() {
             } else if (e.status === 403) {
                 setTokenStatus("hf", "insufficient_permissions");
             } else {
-                console.error("HF Fetch Error:", err);
+                console.error("HF Fetch Error:", err instanceof Error ? err.message : "Unknown error");
             }
             setError("Failed to fetch Hugging Face assets. Check your token permissions.");
         } finally {
