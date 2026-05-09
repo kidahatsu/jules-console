@@ -231,8 +231,9 @@ export async function createJulesSession({ task, repo, branch = "main", automati
             parsedError = JSON.parse(errorText);
         } catch { /* ignored */ }
         
-        console.error(`Jules API Create Error [${response.status}]:`, errorText);
-        throw new Error(`Jules API Error (${response.status}): ${parsedError?.error?.message || errorText || response.statusText}`);
+        const safeMessage = parsedError?.error?.message || response.statusText;
+        console.error(`Jules API Create Error [${response.status}]: ${safeMessage}`);
+        throw new Error(`Jules API Error (${response.status}): ${safeMessage}`);
     }
 
     return response.json();
@@ -256,14 +257,17 @@ export async function listJulesSessions(pageSize = 100) {
         }
         
         let errorText = "";
+        let parsedError: { error?: { message?: string } } | null = null;
         try {
             errorText = await response.text();
+            parsedError = JSON.parse(errorText);
         } catch {
             errorText = "Could not parse error response body";
         }
         
-        console.error(`Jules API List Error [${response.status}]:`, errorText);
-        throw new Error(`Jules API Error (${response.status}): ${errorText || response.statusText}`);
+        const safeMessage = parsedError?.error?.message || response.statusText;
+        console.error(`Jules API List Error [${response.status}]: ${safeMessage}`);
+        throw new Error(`Jules API Error (${response.status}): ${safeMessage}`);
     }
 
     return response.json();
@@ -282,13 +286,16 @@ export async function getJulesSession(id: string) {
 
     if (!response.ok) {
         let errorText = "";
+        let parsedError: { error?: { message?: string } } | null = null;
         try {
             errorText = await response.text();
+            parsedError = JSON.parse(errorText);
         } catch {
             errorText = "Could not parse error response body";
         }
-        console.error(`Jules API Get Error [${response.status}]:`, errorText);
-        throw new Error(`Jules API Error (${response.status}): ${errorText || response.statusText}`);
+        const safeMessage = parsedError?.error?.message || response.statusText;
+        console.error(`Jules API Get Error [${response.status}]: ${safeMessage}`);
+        throw new Error(`Jules API Error (${response.status}): ${safeMessage}`);
     }
 
     return response.json();
@@ -308,13 +315,16 @@ export async function deleteJulesSession(id: string) {
     if (!response.ok) {
         if (response.status === 404) return; // Already deleted
         let errorText = "";
+        let parsedError: { error?: { message?: string } } | null = null;
         try {
             errorText = await response.text();
+            parsedError = JSON.parse(errorText);
         } catch {
             errorText = "Could not parse error response body";
         }
-        console.error(`Jules API Delete Error [${response.status}]:`, errorText);
-        throw new Error(`Jules API Error (${response.status}): ${errorText || response.statusText}`);
+        const safeMessage = parsedError?.error?.message || response.statusText;
+        console.error(`Jules API Delete Error [${response.status}]: ${safeMessage}`);
+        throw new Error(`Jules API Error (${response.status}): ${safeMessage}`);
     }
 
     return response.json();
