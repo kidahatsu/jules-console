@@ -215,7 +215,7 @@ export async function getUserProfile() {
                     });
         return response.data;
     } catch (error) {
-        console.error("Failed to fetch user profile", error);
+        console.error("Failed to fetch user profile:", error instanceof Error ? error.message : "Unknown error");
         return null;
     }
 }
@@ -352,7 +352,7 @@ export async function getReadme(owner: string, repo: string) {
         // Content is base64 encoded
         return atob(response.data.content);
     } catch (error) {
-        console.error("Failed to fetch README", error);
+        console.error("Failed to fetch README:", error instanceof Error ? error.message : "Unknown error");
         return null;
     }
 }
