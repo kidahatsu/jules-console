@@ -162,7 +162,7 @@ export function useInbox() {
                 ));
                 return body;
             } catch (e) {
-                console.error("Failed to fetch notification detail", e);
+                console.error('Failed to fetch notification detail:', e instanceof Error ? e.message : 'Unknown error');
                 return "";
             }
         }

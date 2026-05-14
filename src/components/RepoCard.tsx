@@ -49,7 +49,7 @@ export const RepoCard = memo(function RepoCard({ repo, onDelete, onCloneToNew }:
             repo.description = cleanDescription;
             setDescription(cleanDescription);
         } catch (error) {
-            console.error(error);
+            console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
             alert("Failed to update description");
         } finally {
             setIsSavingDesc(false);
@@ -86,7 +86,7 @@ export const RepoCard = memo(function RepoCard({ repo, onDelete, onCloneToNew }:
                 alert("No README found to generate description from.");
             }
         } catch (error) {
-            console.error(error);
+            console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
         } finally {
             setIsGeneratingDesc(false);
         }
