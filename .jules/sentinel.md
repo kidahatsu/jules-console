@@ -22,3 +22,8 @@
 **Vulnerability:** The application was logging raw API error responses (`errorText` and raw `err` objects) directly to the browser console. This could inadvertently expose sensitive internal details, API keys, URLs, or full stack traces to the client side.
 **Learning:** Frontend applications must sanitize their error logs. Unfiltered logs can act as a vector for information leakage, giving attackers insight into backend infrastructure or exposing sensitive configuration parameters.
 **Prevention:** Always log generic error messages (with status codes if necessary) instead of raw payload bodies or unhandled error objects in `console.error` calls.
+
+## 2025-05-18 - [CRITICAL] Prevent Information Leakage via Raw Error Logging
+**Vulnerability:** Raw error objects (e.g., `err` or `error` caught in try/catch blocks) were being logged directly to `console.error()` in various components (`BranchManagerModal`, `CreateRepoModal`, `RepoCard`, `JulesActionModal`).
+**Learning:** Logging raw error objects directly to the browser console can expose sensitive internal details, stack traces, and application state to the client side, potentially providing valuable information to attackers.
+**Prevention:** Always sanitize error messages before logging them using a pattern like `console.error("Error:", err instanceof Error ? err.message : "Unknown error")` to ensure only the message string is logged without stack traces.
