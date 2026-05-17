@@ -139,7 +139,7 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
             }
 
         } catch (err: unknown) {
-            console.error(err);
+            console.error("Jules Action Error:", err instanceof Error ? err.message : "Unknown error");
             const errorMessage = err instanceof Error ? err.message : "Failed to start session";
             setError(errorMessage);
         } finally {

@@ -35,7 +35,7 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
             const data = await getBranches(owner, name);
             setBranches(data);
         } catch (err) {
-            console.error(err);
+            console.error("Branch Manager Error:", err instanceof Error ? err.message : "Unknown error");
             setError("Failed to load branches");
         } finally {
             setIsLoading(false);
@@ -65,7 +65,7 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
             setNewBranchName("");
             await loadBranches();
         } catch (err: unknown) {
-            console.error(err);
+            console.error("Branch Manager Error:", err instanceof Error ? err.message : "Unknown error");
             setError(err instanceof Error ? err.message : "Failed to create branch");
         } finally {
             setIsCreating(false);
@@ -82,7 +82,7 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
             await deleteBranch(owner, name, branchName);
             await loadBranches();
         } catch (err: unknown) {
-            console.error(err);
+            console.error("Branch Manager Error:", err instanceof Error ? err.message : "Unknown error");
             setError("Failed to delete branch");
             setIsLoading(false); // Stop loading only on error, success handled by loadBranches re-render
         }
