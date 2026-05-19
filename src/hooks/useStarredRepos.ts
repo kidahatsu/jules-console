@@ -154,7 +154,7 @@ export function useStarredRepos() {
             StarredReviewService.deleteReview(repo.id);
             refetch();
         } catch (err) {
-            console.error("Failed to unstar repo", err);
+            console.error("Failed to unstar repo:", err instanceof Error ? err.message : "Unknown error");
             throw err;
         }
     };
