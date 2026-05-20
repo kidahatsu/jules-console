@@ -53,7 +53,7 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
                 }
             }
         } catch (e) {
-            console.error("Failed to check for PR", e);
+            console.error("Failed to check for PR", e instanceof Error ? e.message : "Unknown error");
         }
     }, [repo, isOwnedRepo, isHFAsset, isInboxTask]);
 
@@ -139,7 +139,7 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
             }
 
         } catch (err: unknown) {
-            console.error(err);
+            console.error("Error:", err instanceof Error ? err.message : "Unknown error");
             const errorMessage = err instanceof Error ? err.message : "Failed to start session";
             setError(errorMessage);
         } finally {

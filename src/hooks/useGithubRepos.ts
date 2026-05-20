@@ -57,7 +57,7 @@ export function useGithubRepos() {
             // Re-invalidate query to update list
             refetch();
         } catch (e: unknown) {
-            console.error("Failed to delete repo", e);
+            console.error("Failed to delete repo", e instanceof Error ? e.message : "Unknown error");
             const err = e as { status?: number };
             if (err.status === 404 || err.status === 403) {
                 alert("Failed to delete repository. Please ensure your GitHub token has the 'delete_repo' scope enabled.");

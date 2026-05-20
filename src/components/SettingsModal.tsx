@@ -56,7 +56,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 setTestStatus(prev => ({ ...prev, [provider]: "error" }));
             }
         } catch (e) {
-            console.error(`Test ${provider} failed`, e);
+            console.error(`Test ${provider} failed`, e instanceof Error ? e.message : "Unknown error");
             setTestStatus(prev => ({ ...prev, [provider]: "error" }));
         }
     };
