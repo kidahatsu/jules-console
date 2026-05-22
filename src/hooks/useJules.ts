@@ -64,13 +64,13 @@ export function useJules() {
                     setTokenStatus("jules", "invalid");
                     setError("API Key unauthorized. Please check your account settings.");
                 } else {
-                    console.warn("API List failed, utilizing local storage only.", apiErr);
+                    console.warn("API List failed, utilizing local storage only:", apiErr instanceof Error ? apiErr.message : "Unknown error");
                 }
             }
 
             setSessions(currentSessions);
         } catch (e) {
-            console.error("Failed to load sessions", e);
+            console.error("Failed to load sessions:", e instanceof Error ? e.message : "Unknown error");
             setError("Failed to load sessions from storage.");
         } finally {
             if (!silent) setLoading(false);
@@ -134,7 +134,7 @@ export function useJules() {
             // Fire and forget server deletes (or await if we wanted loading state)
             await Promise.all(ids.map(id => deleteJulesSession(id)));
         } catch (e: unknown) {
-            console.error("Failed to delete sessions server-side", e);
+            console.error("Failed to delete sessions server-side:", e instanceof Error ? e.message : "Unknown error");
             // Optionally revert local state here if strict consistency needed
             // For now, just logging error is acceptable for MVP
         }
