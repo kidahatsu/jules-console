@@ -140,7 +140,7 @@ export function useStarredRepos() {
                         clearSession(repo.id);
                     }
                 } catch (e) {
-                    console.warn(`Failed to poll session ${repo.activeSessionId}`, e);
+                    console.warn(`Failed to poll session ${repo.activeSessionId}:`, e instanceof Error ? e.message : "Unknown error");
                 }
             }
         }, 10000); // Poll every 10s
@@ -154,7 +154,7 @@ export function useStarredRepos() {
             StarredReviewService.deleteReview(repo.id);
             refetch();
         } catch (err) {
-            console.error("Failed to unstar repo", err);
+            console.error("Failed to unstar repo:", err instanceof Error ? err.message : "Unknown error");
             throw err;
         }
     };

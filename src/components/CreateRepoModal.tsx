@@ -84,7 +84,7 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
             onSuccess();
             onClose();
         } catch (err: unknown) {
-            console.error(err);
+            console.error("Error:", err instanceof Error ? err.message : "Unknown error");
             const errorMessage = err instanceof Error ? err.message : "Failed to create repository";
             setError(errorMessage);
         } finally {
