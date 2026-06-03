@@ -40,7 +40,7 @@ export function getAccounts(): ProviderProfile[] {
             };
         });
     } catch (e) {
-        console.error("Failed to parse accounts", e instanceof Error ? e.message : "Unknown error");
+        console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
     }
 }

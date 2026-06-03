@@ -19,7 +19,7 @@ describe('Security Sanitization', () => {
     const loggedMessage = lastCall.join(' ');
     
     // We expect the message to be sanitized, not containing the full error object structure
-    expect(loggedMessage).toContain('Failed to parse accounts');
+    expect(loggedMessage).toContain('Failed to parse accounts:');
     
     // We check that the error message is a string and not a complex object
     // JSON.parse error messages usually describe the syntax error
