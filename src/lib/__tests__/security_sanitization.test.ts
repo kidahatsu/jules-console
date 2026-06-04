@@ -15,6 +15,7 @@ describe('Security Sanitization', () => {
     getAccounts();
     
     expect(console.error).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lastCall = (console.error as any).mock.calls[0];
     const loggedMessage = lastCall.join(' ');
     

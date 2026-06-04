@@ -64,7 +64,7 @@ export function useJules() {
                     setTokenStatus("jules", "invalid");
                     setError("API Key unauthorized. Please check your account settings.");
                 } else {
-                    console.warn("API List failed, utilizing local storage only.", apiErr);
+                    console.warn("API List failed, utilizing local storage only:", apiErr instanceof Error ? apiErr.message : 'Unknown error');
                 }
             }
 
