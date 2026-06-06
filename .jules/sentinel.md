@@ -22,3 +22,8 @@
 **Vulnerability:** The application was logging raw API error responses (`errorText` and raw `err` objects) directly to the browser console. This could inadvertently expose sensitive internal details, API keys, URLs, or full stack traces to the client side.
 **Learning:** Frontend applications must sanitize their error logs. Unfiltered logs can act as a vector for information leakage, giving attackers insight into backend infrastructure or exposing sensitive configuration parameters.
 **Prevention:** Always log generic error messages (with status codes if necessary) instead of raw payload bodies or unhandled error objects in `console.error` calls.
+
+## 2025-06-15 - [SECURITY ENHANCEMENT] Prevent LocalStorage Deserialization Exploits
+**Vulnerability:** The `getAccounts` function in `src/lib/jules.ts` read data from `localStorage`, parsed it with `JSON.parse`, and blindly cast the elements using `as ProviderProfile`. This insecure deserialization pattern could allow state corruption or arbitrary code execution if `localStorage` was tampered with (e.g., via XSS).
+**Learning:** Even internal sources like `localStorage` must be treated as untrusted data boundaries. Simply using `JSON.parse` and casting to a TypeScript type does not guarantee the actual structure or safety of the runtime object.
+**Prevention:** Always validate data retrieved from `localStorage` using strict schemas like Zod (e.g., `z.array(ProviderProfileSchema).safeParse()`) before using it in application state. Additionally, avoid using `as any` in tests; use `vi.mocked()` for mocked functions to satisfy strict linting rules.
