@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { env } from "./env";
 
 const JULES_API_URL = "/api/jules";
@@ -14,34 +15,54 @@ export interface ProviderProfile {
 
 export type JulesAccount = ProviderProfile;
 
+const ProviderProfileSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    apiKey: z.string(),
+    githubToken: z.string(),
+    hfToken: z.string(),
+    isActive: z.boolean(),
+});
+
 export function getAccounts(): ProviderProfile[] {
     const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+    const defaultAccount: ProviderProfile = {
+        id: "default",
+        name: "Default Account",
+        apiKey: env.JULES_API_KEY,
+        githubToken: env.GITHUB_TOKEN,
+        hfToken: env.HF_TOKEN,
+        isActive: true,
+    };
     if (!saved) {
         // Migration or initial state: seed with env keys if available
-        const initialAccount: ProviderProfile = {
-            id: "default",
-            name: "Default Account",
-            apiKey: env.JULES_API_KEY,
-            githubToken: env.GITHUB_TOKEN,
-            hfToken: env.HF_TOKEN,
-            isActive: true,
-        };
-        return [initialAccount];
+        return [defaultAccount];
     }
     try {
         const parsed = JSON.parse(saved);
+
+        // Use Zod to safely validate the data structure retrieved from localStorage
+        const result = z.array(ProviderProfileSchema.partial()).safeParse(parsed);
+
+        if (!result.success) {
+            console.error("Failed to parse accounts: Invalid schema");
+            return [defaultAccount];
+        }
+
         // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        return result.data.map((profile) => {
             return {
-                ...profile,
+                id: profile.id || "default",
+                name: profile.name || "Default Account",
+                apiKey: profile.apiKey || env.JULES_API_KEY,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
                 hfToken: profile.hfToken || env.HF_TOKEN,
+                isActive: profile.isActive ?? true,
             };
         });
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
-        return [];
+        return [defaultAccount];
     }
 }
 
