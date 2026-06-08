@@ -1,3 +1,8 @@
+## 2025-05-15 - [CRITICAL] Fix Insecure Deserialization in Local Storage
+**Vulnerability:** The application was parsing user accounts from `localStorage` (`jules_accounts_v1`) and casting them directly into application state without validating the structure or contents of the payload.
+**Learning:** Data retrieved from `localStorage` must be treated as untrusted input. Directly casting unvalidated JSON from `localStorage` exposes the application to state corruption and insecure deserialization attacks.
+**Prevention:** Always validate data retrieved from `localStorage` or other external sources using a strict validation schema like Zod (e.g., `z.array(ProviderProfileSchema).safeParse()`) before casting or using the data.
+
 ## 2026-04-27 - [SECURITY ENHANCEMENT] Secure External Links in Markdown Rendering
 **Vulnerability:** While not an active vulnerability, adding `target="_blank"` to open user-generated markdown links in new tabs without `rel="noopener noreferrer"` would create a reverse tabnabbing vulnerability, allowing malicious linked pages to access `window.opener`.
 **Learning:** `react-markdown` does not automatically add `target="_blank"` or safety attributes to anchor tags when rendering links. If we want links to open in a new tab safely, we must manually configure both attributes.
