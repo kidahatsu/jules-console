@@ -1,4 +1,6 @@
 import { env } from "./env";
+import { ProviderProfileSchema } from "./validation";
+import { z } from "zod";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -30,9 +32,14 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
+        const result = z.array(ProviderProfileSchema).safeParse(parsed);
+        if (!result.success) {
+            console.error("Failed to parse accounts: Invalid schema");
+            return [];
+        }
+
         // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        return result.data.map((profile) => {
             return {
                 ...profile,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
