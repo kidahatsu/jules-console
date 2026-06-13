@@ -1,3 +1,8 @@
+## 2026-04-27 - [CRITICAL] Fix Insecure Deserialization in getAccounts
+**Vulnerability:** The `getAccounts` function in `src/lib/jules.ts` parsed JSON from `localStorage` and casted it to `ProviderProfile[]` without proper schema validation.
+**Learning:** Always validate data retrieved from `localStorage` or other external sources using a strict validation schema like Zod before casting or using the data, to prevent insecure deserialization and state corruption.
+**Prevention:** Use `z.array(ProviderProfileSchema).safeParse()` to validate the parsed JSON data before use.
+
 ## 2026-04-27 - [SECURITY ENHANCEMENT] Secure External Links in Markdown Rendering
 **Vulnerability:** While not an active vulnerability, adding `target="_blank"` to open user-generated markdown links in new tabs without `rel="noopener noreferrer"` would create a reverse tabnabbing vulnerability, allowing malicious linked pages to access `window.opener`.
 **Learning:** `react-markdown` does not automatically add `target="_blank"` or safety attributes to anchor tags when rendering links. If we want links to open in a new tab safely, we must manually configure both attributes.
