@@ -1,4 +1,6 @@
 import { env } from "./env";
+import { z } from "zod";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -16,29 +18,35 @@ export type JulesAccount = ProviderProfile;
 
 export function getAccounts(): ProviderProfile[] {
     const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+    const initialAccount: ProviderProfile = {
+        id: "default",
+        name: "Default Account",
+        apiKey: env.JULES_API_KEY,
+        githubToken: env.GITHUB_TOKEN,
+        hfToken: env.HF_TOKEN,
+        isActive: true,
+    };
+
     if (!saved) {
         // Migration or initial state: seed with env keys if available
-        const initialAccount: ProviderProfile = {
-            id: "default",
-            name: "Default Account",
-            apiKey: env.JULES_API_KEY,
-            githubToken: env.GITHUB_TOKEN,
-            hfToken: env.HF_TOKEN,
-            isActive: true,
-        };
         return [initialAccount];
     }
     try {
         const parsed = JSON.parse(saved);
+        // Security: Validate deserialized JSON against strict schema to prevent state corruption/injection
+        const result = z.array(ProviderProfileSchema).safeParse(parsed);
+
+        if (!result.success) {
+            console.error("Invalid account configuration structure");
+            return [initialAccount];
+        }
+
         // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
-            return {
-                ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
-            };
-        });
+        return result.data.map((profile) => ({
+            ...profile,
+            githubToken: profile.githubToken || env.GITHUB_TOKEN,
+            hfToken: profile.hfToken || env.HF_TOKEN,
+        }));
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
