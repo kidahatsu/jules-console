@@ -1,4 +1,6 @@
 import { env } from "./env";
+import { ProviderProfileSchema } from "./validation";
+import { z } from "zod";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -30,15 +32,22 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
-            return {
-                ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
-            };
-        });
+        // Security: Validate data from localStorage using Zod to prevent insecure deserialization
+        const validationResult = z.array(ProviderProfileSchema).safeParse(
+            Array.isArray(parsed) ? parsed.map((a: unknown) => {
+                const profile = a as ProviderProfile;
+                return {
+                    ...profile,
+                    githubToken: profile.githubToken || env.GITHUB_TOKEN,
+                    hfToken: profile.hfToken || env.HF_TOKEN,
+                };
+            }) : []
+        );
+        if (!validationResult.success) {
+            console.error("Invalid accounts data in storage:", validationResult.error.message);
+            return [];
+        }
+        return validationResult.data;
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
