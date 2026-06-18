@@ -1,4 +1,6 @@
 import { env } from "./env";
+import { z } from "zod";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -30,15 +32,19 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
-            return {
+        // Security enhancement: Validate saved profiles schema to prevent state corruption/injection
+        const result = z.array(ProviderProfileSchema).safeParse(parsed);
+        if (result.success) {
+            // Ensure new fields exist for legacy saved accounts
+            return result.data.map((profile) => ({
                 ...profile,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
                 hfToken: profile.hfToken || env.HF_TOKEN,
-            };
-        });
+            }));
+        } else {
+             console.error("Invalid accounts format in storage:", result.error.message);
+             return [];
+        }
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
