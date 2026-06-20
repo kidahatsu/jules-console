@@ -22,3 +22,8 @@
 **Vulnerability:** The application was logging raw API error responses (`errorText` and raw `err` objects) directly to the browser console. This could inadvertently expose sensitive internal details, API keys, URLs, or full stack traces to the client side.
 **Learning:** Frontend applications must sanitize their error logs. Unfiltered logs can act as a vector for information leakage, giving attackers insight into backend infrastructure or exposing sensitive configuration parameters.
 **Prevention:** Always log generic error messages (with status codes if necessary) instead of raw payload bodies or unhandled error objects in `console.error` calls.
+
+## 2025-05-15 - [SECURITY ENHANCEMENT] Prevent Information Leakage in `console.warn`
+**Vulnerability:** The application was logging raw error objects directly to the browser console using `console.warn` in some hooks (e.g., `useJules.ts`, `useStarredRepos.ts`). This could expose sensitive internal details, similar to the previously fixed `console.error` issue.
+**Learning:** All forms of client-side logging (`console.log`, `console.warn`, `console.error`) must be treated as potential vectors for information leakage. Sanitization rules apply uniformly across all logging methods.
+**Prevention:** Always sanitize error objects before logging them with `console.warn`, extracting only the safe `message` property (e.g., `err instanceof Error ? err.message : "Unknown error"`), rather than passing the raw object.
