@@ -22,3 +22,8 @@
 **Vulnerability:** The application was logging raw API error responses (`errorText` and raw `err` objects) directly to the browser console. This could inadvertently expose sensitive internal details, API keys, URLs, or full stack traces to the client side.
 **Learning:** Frontend applications must sanitize their error logs. Unfiltered logs can act as a vector for information leakage, giving attackers insight into backend infrastructure or exposing sensitive configuration parameters.
 **Prevention:** Always log generic error messages (with status codes if necessary) instead of raw payload bodies or unhandled error objects in `console.error` calls.
+
+## 2026-06-22 - [CRITICAL] Prevent Insecure Deserialization of Identity Profiles
+**Vulnerability:** The `getAccounts` function in `src/lib/jules.ts` loaded identity profiles from local storage, applied defaults, and returned the array without strictly validating that the elements matched the expected `ProviderProfile` structure. Since local storage can be manually edited, this bypasses the validation usually enforced at profile creation.
+**Learning:** Directly parsing and returning data from local storage without strict schema verification is insecure because it relies on the storage's content being uncompromised and structurally valid. This can lead to state corruption and injection risks.
+**Prevention:** Always validate data deserialized from external sources (such as `localStorage`) using a strict schema (e.g., `ProviderProfileSchema`) after any necessary data migrations have been performed, avoiding insecure deserialization.
