@@ -1,4 +1,6 @@
 import { env } from "./env";
+import { z } from "zod";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -31,14 +33,23 @@ export function getAccounts(): ProviderProfile[] {
     try {
         const parsed = JSON.parse(saved);
         // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
+        const migrated = Array.isArray(parsed) ? parsed.map((a: unknown) => {
             const profile = a as ProviderProfile;
             return {
                 ...profile,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
                 hfToken: profile.hfToken || env.HF_TOKEN,
             };
-        });
+        }) : [];
+
+        // Validate via schema
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (result.success) {
+            return result.data as ProviderProfile[];
+        } else {
+            console.error("Validation failed for accounts:", result.error.message);
+            return [];
+        }
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
