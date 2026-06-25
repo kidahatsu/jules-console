@@ -22,3 +22,8 @@
 **Vulnerability:** The application was logging raw API error responses (`errorText` and raw `err` objects) directly to the browser console. This could inadvertently expose sensitive internal details, API keys, URLs, or full stack traces to the client side.
 **Learning:** Frontend applications must sanitize their error logs. Unfiltered logs can act as a vector for information leakage, giving attackers insight into backend infrastructure or exposing sensitive configuration parameters.
 **Prevention:** Always log generic error messages (with status codes if necessary) instead of raw payload bodies or unhandled error objects in `console.error` calls.
+
+## 2024-05-24 - [CRITICAL] Prevent Insecure Deserialization via LocalStorage
+**Vulnerability:** The application was parsing stored JSON directly from `localStorage` in `getAccounts()` and casting it to `ProviderProfile` arrays without validation. This allowed malformed or intentionally modified state data to corrupt application state.
+**Learning:** Data stored in `localStorage` is accessible and modifiable by the client and extensions. We must treat it as untrusted input when hydrating application state.
+**Prevention:** Always validate data retrieved from `localStorage` using a strict validation schema like Zod (e.g., `z.array(ProviderProfileSchema).safeParse()`) before casting or using the data.
