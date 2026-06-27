@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { env } from "./env";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -30,15 +32,25 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        // Ensure new fields exist for legacy saved accounts before strict validation
+        const migrated = parsed.map((a: unknown) => {
+            const profile = a as Record<string, unknown>;
             return {
                 ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
+                githubToken: typeof profile.githubToken === 'string' ? profile.githubToken : env.GITHUB_TOKEN,
+                hfToken: typeof profile.hfToken === 'string' ? profile.hfToken : env.HF_TOKEN,
             };
         });
+
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (!result.success) {
+            console.error("Failed to parse accounts:", "Schema validation failed");
+            return [];
+        }
+        return result.data;
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
