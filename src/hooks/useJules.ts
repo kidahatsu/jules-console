@@ -40,7 +40,17 @@ export function useJules() {
         try {
             // 1. Load Local (source of truth for metadata like "task")
             const saved = localStorage.getItem(storageKey);
-            let currentSessions: Session[] = saved ? JSON.parse(saved) : [];
+            let currentSessions: Session[] = [];
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        currentSessions = parsed;
+                    }
+                } catch (e) {
+                    console.error("Invalid session data in storage:", e instanceof Error ? e.message : "Unknown error");
+                }
+            }
 
             // 2. Load API (source of truth for status/existence)
             try {

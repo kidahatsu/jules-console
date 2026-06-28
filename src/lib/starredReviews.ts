@@ -1,4 +1,5 @@
 import type { ReviewStatus } from "@/hooks/useStarredRepos";
+import { z } from "zod";
 
 const STORAGE_KEY = "starred_repo_reviews_v1";
 
@@ -10,6 +11,14 @@ export interface StarredReview {
 
 export type StarredReviewMap = Record<number, StarredReview>;
 
+const StarredReviewSchema = z.object({
+    status: z.enum(["TO_REVIEW", "REVIEWED", "REJECTED"]),
+    notes: z.string().optional(),
+    activeSessionId: z.string().optional(),
+});
+
+const StarredReviewMapSchema = z.record(z.coerce.number(), StarredReviewSchema);
+
 /**
  * Service for persisting starred repository reviews and telemetry metadata.
  */
@@ -19,7 +28,20 @@ export const StarredReviewService = {
      */
     getReviews: (): StarredReviewMap => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
+        if (!saved) return {};
+        try {
+            const parsed = JSON.parse(saved);
+            if (!parsed || typeof parsed !== 'object') return {};
+            const result = StarredReviewMapSchema.safeParse(parsed);
+            if (!result.success) {
+                console.error("Invalid starred review data in storage:", result.error.message);
+                return {};
+            }
+            return result.data as StarredReviewMap;
+        } catch (e) {
+            console.error("Failed to parse starred reviews:", e instanceof Error ? e.message : "Unknown error");
+            return {};
+        }
     },
 
     /**
