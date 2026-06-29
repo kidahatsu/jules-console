@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { env } from "./env";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -31,14 +33,24 @@ export function getAccounts(): ProviderProfile[] {
     try {
         const parsed = JSON.parse(saved);
         // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        const dataArray = Array.isArray(parsed) ? parsed : [];
+        const migrated = dataArray.map((a: unknown) => {
+            const profile = a as Partial<ProviderProfile>;
             return {
                 ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
+                githubToken: profile?.githubToken || env.GITHUB_TOKEN,
+                hfToken: profile?.hfToken || env.HF_TOKEN,
             };
         });
+
+        // Security enhancement: Validate local storage data schema to prevent insecure deserialization
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (result.success) {
+            return result.data;
+        } else {
+            console.error("Failed to parse accounts:", "Invalid schema format");
+            return [];
+        }
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
