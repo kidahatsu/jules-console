@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { env } from "./env";
 
 const JULES_API_URL = "/api/jules";
@@ -11,6 +12,15 @@ export interface ProviderProfile {
     hfToken: string;
     isActive: boolean;
 }
+
+const ProviderProfileSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    apiKey: z.string(),
+    githubToken: z.string(),
+    hfToken: z.string(),
+    isActive: z.boolean()
+});
 
 export type JulesAccount = ProviderProfile;
 
@@ -30,15 +40,27 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        if (!Array.isArray(parsed)) {
+            throw new Error("Accounts data must be an array");
+        }
+
+        // Security: Apply legacy data migration first before enforcing strict schema validation
+        const migrated = parsed.map((a: unknown) => {
+            const profile = typeof a === 'object' && a !== null ? a as Record<string, unknown> : {};
             return {
                 ...profile,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
                 hfToken: profile.hfToken || env.HF_TOKEN,
             };
         });
+
+        // Security: Validate external data with strict schema to prevent insecure deserialization
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (!result.success) {
+            throw new Error(`Validation failed: ${result.error.message}`);
+        }
+
+        return result.data;
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
