@@ -1,3 +1,8 @@
+## 2026-07-01 - [CRITICAL] Prevent Insecure Deserialization from Local Storage
+**Vulnerability:** The application read user accounts from `localStorage`, parsed them as JSON, and casted the resulting array directly into the application state (ProviderProfile array) without strict schema validation. This allowed arbitrary, schema-violating objects to enter the application state, leading to potential configuration injection or corrupted state.
+**Learning:** Data sourced from `localStorage` must be treated as untrusted external input. Applying type casting (e.g., `a as ProviderProfile`) offers no runtime safety. Legacy data migrations (like assigning default values for new fields) should be applied before enforcing strict schema validation to prevent data loss.
+**Prevention:** Always validate data retrieved from `localStorage` using a strict validation schema like Zod (`z.array(ProviderProfileSchema).safeParse()`) before using the data in the application state. Apply legacy data migrations *before* strict schema validation.
+
 ## 2026-04-27 - [SECURITY ENHANCEMENT] Secure External Links in Markdown Rendering
 **Vulnerability:** While not an active vulnerability, adding `target="_blank"` to open user-generated markdown links in new tabs without `rel="noopener noreferrer"` would create a reverse tabnabbing vulnerability, allowing malicious linked pages to access `window.opener`.
 **Learning:** `react-markdown` does not automatically add `target="_blank"` or safety attributes to anchor tags when rendering links. If we want links to open in a new tab safely, we must manually configure both attributes.
