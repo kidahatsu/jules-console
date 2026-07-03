@@ -1,7 +1,17 @@
+import { z } from "zod";
 import { env } from "./env";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
+
+const ProviderProfileSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    apiKey: z.string(),
+    githubToken: z.string(),
+    hfToken: z.string(),
+    isActive: z.boolean()
+});
 
 export interface ProviderProfile {
     id: string;
@@ -30,15 +40,35 @@ export function getAccounts(): ProviderProfile[] {
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
-            return {
-                ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
-            };
-        });
+
+        // Ensure new fields exist for legacy saved accounts before validation
+        let mapped;
+        if (Array.isArray(parsed)) {
+            mapped = parsed.map((a: unknown) => {
+                const profile = a as Partial<ProviderProfile>;
+                return {
+                    ...profile,
+                    id: profile.id || "default",
+                    name: profile.name || "Default Account",
+                    apiKey: profile.apiKey || "",
+                    githubToken: profile.githubToken || env.GITHUB_TOKEN,
+                    hfToken: profile.hfToken || env.HF_TOKEN,
+                    isActive: profile.isActive ?? true,
+                };
+            });
+        } else {
+           return [];
+        }
+
+        // Validate the data retrieved and mapped from localStorage
+        const validationResult = z.array(ProviderProfileSchema).safeParse(mapped);
+
+        if (!validationResult.success) {
+            console.error("Validation failed for loaded accounts:", validationResult.error.message);
+            return [];
+        }
+
+        return validationResult.data;
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
         return [];
