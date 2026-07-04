@@ -1,5 +1,18 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { z } from "zod";
 import { createJulesSession, listJulesSessions, deleteJulesSession, getJulesSession, getActiveAccount, mapJulesSession, type CreateSessionParams, type JulesSession, type Session } from "@/lib/jules";
+
+export const SessionSchema = z.object({
+    id: z.string(),
+    status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
+    createdAt: z.string(),
+    branch: z.string(),
+    duration: z.string().optional(),
+    logs: z.array(z.record(z.string(), z.unknown())).optional(),
+    automationMode: z.enum(["AUTO_CREATE_PR", "AUTO_MERGE_PR"]).optional(),
+    task: z.string(),
+    repo: z.string().optional(),
+});
 import { useStore } from "@/lib/store";
 
 // Base storage key
@@ -40,7 +53,20 @@ export function useJules() {
         try {
             // 1. Load Local (source of truth for metadata like "task")
             const saved = localStorage.getItem(storageKey);
-            let currentSessions: Session[] = saved ? JSON.parse(saved) : [];
+            let currentSessions: Session[] = [];
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    const result = z.array(SessionSchema).safeParse(parsed);
+                    if (result.success) {
+                        currentSessions = result.data as Session[];
+                    } else {
+                        console.error("Invalid local storage session schema");
+                    }
+                } catch {
+                    // Ignore parse errors
+                }
+            }
 
             // 2. Load API (source of truth for status/existence)
             try {

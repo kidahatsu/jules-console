@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { env } from "./env";
 
 const JULES_API_URL = "/api/jules";
@@ -14,34 +15,51 @@ export interface ProviderProfile {
 
 export type JulesAccount = ProviderProfile;
 
+export const ProviderProfileSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    apiKey: z.string(),
+    githubToken: z.string().default(""),
+    hfToken: z.string().default(""),
+    isActive: z.boolean(),
+});
+
 export function getAccounts(): ProviderProfile[] {
     const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+    const initialAccount: ProviderProfile = {
+        id: "default",
+        name: "Default Account",
+        apiKey: env.JULES_API_KEY,
+        githubToken: env.GITHUB_TOKEN,
+        hfToken: env.HF_TOKEN,
+        isActive: true,
+    };
     if (!saved) {
         // Migration or initial state: seed with env keys if available
-        const initialAccount: ProviderProfile = {
-            id: "default",
-            name: "Default Account",
-            apiKey: env.JULES_API_KEY,
-            githubToken: env.GITHUB_TOKEN,
-            hfToken: env.HF_TOKEN,
-            isActive: true,
-        };
         return [initialAccount];
     }
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts
-        return parsed.map((a: unknown) => {
-            const profile = a as ProviderProfile;
+        // Ensure new fields exist for legacy saved accounts before validation
+        const migrated = Array.isArray(parsed) ? parsed.map((a: unknown) => {
+            if (typeof a !== 'object' || a === null) return a;
+            const profile = a as Record<string, unknown>;
             return {
                 ...profile,
                 githubToken: profile.githubToken || env.GITHUB_TOKEN,
                 hfToken: profile.hfToken || env.HF_TOKEN,
             };
-        });
+        }) : parsed;
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (result.success) {
+            return result.data;
+        } else {
+            console.error("Invalid local storage accounts schema");
+            return [initialAccount];
+        }
     } catch (e) {
         console.error("Failed to parse accounts:", e instanceof Error ? e.message : "Unknown error");
-        return [];
+        return [initialAccount];
     }
 }
 
