@@ -6,7 +6,6 @@ import { testHFToken } from "@/lib/huggingface";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { ProviderProfileSchema } from "@/lib/validation";
-import { z } from "zod";
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -87,13 +86,29 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         reader.onload = (event) => {
             try {
                 const imported = JSON.parse(event.target?.result as string);
-                const result = z.array(ProviderProfileSchema).safeParse(imported);
-                if (result.success) {
-                    setAccounts(result.data as ProviderProfile[]);
-                    setError(null);
+                if (!Array.isArray(imported)) {
+                    setError("Invalid profile file format: expected an array.");
+                    return;
+                }
+                const validAccounts: ProviderProfile[] = [];
+                let hasErrors = false;
+                for (const item of imported) {
+                    const result = ProviderProfileSchema.safeParse(item);
+                    if (result.success) {
+                        validAccounts.push(result.data);
+                    } else {
+                        hasErrors = true;
+                    }
+                }
+                if (validAccounts.length > 0) {
+                    setAccounts(validAccounts);
+                    if (hasErrors) {
+                        setError("Some profiles were invalid and skipped.");
+                    } else {
+                        setError(null);
+                    }
                 } else {
-                    // Security enhancement: Validate imported data schema to prevent injection
-                    setError("Invalid profile file format: " + result.error.issues[0].message);
+                    setError("Invalid profile file format: no valid profiles found.");
                 }
             } catch {
                 setError("Failed to parse profile file.");
