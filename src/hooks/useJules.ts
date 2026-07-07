@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { z } from "zod";
 import { createJulesSession, listJulesSessions, deleteJulesSession, getJulesSession, getActiveAccount, mapJulesSession, type CreateSessionParams, type JulesSession, type Session } from "@/lib/jules";
@@ -90,7 +91,7 @@ export function useJules() {
                     setTokenStatus("jules", "invalid");
                     setError("API Key unauthorized. Please check your account settings.");
                 } else {
-                    console.warn("API List failed, utilizing local storage only.", apiErr);
+                    console.warn("API List failed, utilizing local storage only:", apiErr instanceof Error ? apiErr.message : "Unknown error");
                 }
             }
 

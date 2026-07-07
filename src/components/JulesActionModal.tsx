@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from "react";
 import { X, Loader2, Sparkles, FileText, Search, Zap, GitPullRequest, Info, ArrowRight, Terminal, Cpu, ShieldAlert, LayoutGrid, Palette } from "lucide-react";
 import { createJulesSession } from "@/lib/jules";

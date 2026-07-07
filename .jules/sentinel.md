@@ -27,3 +27,9 @@
 **Vulnerability:** Unvalidated deserialization of `localStorage` data could lead to XSS/poisoning.
 **Learning:** Always validate externally sourced data like `localStorage` before casting it.
 **Prevention:** Apply a strict Zod schema definition with `.safeParse()` instead of directly casting JSON strings.
+
+## 2025-05-15 - [SECURITY ENHANCEMENT] Prevent Information Leakage in `console.warn`
+**Vulnerability:** The application was logging raw error objects directly to the browser console using `console.warn` in some hooks (e.g., `useJules.ts`, `useStarredRepos.ts`). This could expose sensitive internal details, similar to the previously fixed `console.error` issue.
+**Learning:** All forms of client-side logging (`console.log`, `console.warn`, `console.error`) must be treated as potential vectors for information leakage. Sanitization rules apply uniformly across all logging methods.
+**Prevention:** Always sanitize error objects before logging them with `console.warn`, extracting only the safe `message` property (e.g., `err instanceof Error ? err.message : "Unknown error"`), rather than passing the raw object.
+

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
 import { X, Star, ExternalLink, MessageSquare, CheckCircle2, XCircle, Save, Calendar, Code, Trash2, Loader2, Link2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

@@ -15,8 +15,7 @@ describe('Security Sanitization', () => {
     getAccounts();
     
     expect(console.error).toHaveBeenCalled();
-    const mockConsoleError = vi.mocked(console.error);
-    const lastCall = mockConsoleError.mock.calls[0];
+    const lastCall = vi.mocked(console.error).mock.calls[0];
     const loggedMessage = lastCall.join(' ');
     
     // We expect the message to be sanitized, not containing the full error object structure

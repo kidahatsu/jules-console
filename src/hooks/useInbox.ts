@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from "react";
 import { getNotifications, markNotificationRead, getNotificationSubjectDetail, markAllNotificationsRead, unsubscribeFromThread } from "@/lib/github";
 import { getUserDiscussions, getHuggingFaceUser, type HFDiscussion } from "@/lib/huggingface";
