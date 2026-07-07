@@ -1,6 +1,15 @@
+import { z } from "zod";
 import type { ReviewStatus } from "@/hooks/useStarredRepos";
 
 const STORAGE_KEY = "starred_repo_reviews_v1";
+
+export const StarredReviewSchema = z.object({
+    status: z.enum(["TO_REVIEW", "REVIEWED", "REJECTED"]),
+    notes: z.string().optional(),
+    activeSessionId: z.string().optional(),
+});
+
+export const StarredReviewMapSchema = z.record(z.string(), StarredReviewSchema);
 
 export interface StarredReview {
     status: ReviewStatus;
@@ -19,7 +28,24 @@ export const StarredReviewService = {
      */
     getReviews: (): StarredReviewMap => {
         const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
+        if (!saved) return {};
+        try {
+            const parsed = JSON.parse(saved);
+            const result = StarredReviewMapSchema.safeParse(parsed);
+            if (result.success) {
+                // Ensure key is numeric as the record uses string in Zod but numeric here
+                const output: StarredReviewMap = {};
+                for (const [k, v] of Object.entries(result.data)) {
+                    output[Number(k)] = v as StarredReview;
+                }
+                return output;
+            } else {
+                console.error("Invalid local storage reviews schema");
+                return {};
+            }
+        } catch {
+            return {};
+        }
     },
 
     /**
