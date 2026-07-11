@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/immutability */
 import { useState, useEffect } from "react";
 import { X, Loader2, BookCopy, Clipboard, Link as LinkIcon } from "lucide-react";
 import { createRepoFromTemplate } from "@/lib/github";

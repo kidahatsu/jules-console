@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from "react";
 import { X, GitBranch, Plus, Trash2, Loader2, RefreshCw } from "lucide-react";
 import type { GithubRepo } from "@/hooks/useGithubRepos";
