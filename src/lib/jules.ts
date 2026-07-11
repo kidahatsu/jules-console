@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { env } from "./env";
+import { ProviderProfileSchema } from "./validation";
 
 const JULES_API_URL = "/api/jules";
 const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
@@ -15,14 +16,7 @@ export interface ProviderProfile {
 
 export type JulesAccount = ProviderProfile;
 
-export const ProviderProfileSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    apiKey: z.string(),
-    githubToken: z.string().default(""),
-    hfToken: z.string().default(""),
-    isActive: z.boolean(),
-});
+
 
 export function getAccounts(): ProviderProfile[] {
     const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);

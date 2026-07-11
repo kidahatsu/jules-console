@@ -33,3 +33,23 @@
 **Learning:** All forms of client-side logging (`console.log`, `console.warn`, `console.error`) must be treated as potential vectors for information leakage. Sanitization rules apply uniformly across all logging methods.
 **Prevention:** Always sanitize error objects before logging them with `console.warn`, extracting only the safe `message` property (e.g., `err instanceof Error ? err.message : "Unknown error"`), rather than passing the raw object.
 
+## 2026-07-11 - [HIGH] Remove Debug console.log from Production Code
+**Vulnerability:** `getUserRepos()` in `src/lib/github.ts` contained a `console.log("[getUserRepos] Starting concurrent fetch...")` debug statement. While this particular message doesn't leak secrets, production debug logs are an information disclosure risk, signalling internal architecture and timing to any observer of the browser console.
+**Learning:** Debug `console.log` statements must never be present in production code paths. Even benign-looking messages reveal implementation details and establish a permissive logging culture that can lead to more serious leaks over time.
+**Prevention:** Remove all debug `console.log` statements before committing. Use feature flags or proper dev-only logging utilities if runtime diagnostics are required.
+
+## 2026-07-11 - [CRITICAL] URL Injection in getNotificationSubjectDetail
+**Vulnerability:** `getNotificationSubjectDetail(url)` in `src/lib/github.ts` accepted a URL from an external notification payload, extracted only the pathname, and then passed it directly to `octokit.request()`. A crafted notification response with a URL pointing to a non-GitHub API host (e.g., `https://attacker.com/sensitive-path`) could, in theory, redirect authenticated GitHub API calls to unintended endpoints.
+**Learning:** External URLs from API responses must never be trusted without validation. Extracting only a URL's pathname is insufficient if the host itself is not checked — the Octokit request `GET ${path}` pattern can be exploited via the path component.
+**Prevention:** Always validate that the hostname of any inbound URL is exactly `api.github.com` before extracting and using the path in authenticated API calls. Added explicit check: `if (apiUrl.hostname !== "api.github.com") throw new Error(...)`.
+
+## 2026-07-11 - [HIGH] Credential Double-Storage via Zustand Persist
+**Vulnerability:** The Zustand store in `src/lib/store.ts` was configured with `persist` middleware without a `partialize` function. This caused the **entire** app state — including `accounts` (which contain `apiKey`, `githubToken`, and `hfToken`) — to be written to a second `localStorage` key: `ag-app-storage`. This created a silent second copy of all API credentials that was separate from the intentional `jules_accounts_v1` storage.
+**Learning:** Zustand's `persist` middleware serializes the entire store state by default. When persisting stores that contain mixed sensitive/non-sensitive data, always use `partialize` to explicitly allowlist only the fields that should be persisted to `localStorage`.
+**Prevention:** Added `partialize: (state) => ({ theme: state.theme })` so only the non-sensitive `theme` preference is written to `ag-app-storage`. Credentials remain in `jules_accounts_v1` managed by `saveAccounts()`.
+
+## 2026-07-11 - [MEDIUM] Schema Duplication (Weaker Duplicate in jules.ts)
+**Vulnerability:** `src/lib/jules.ts` defined its own `ProviderProfileSchema` that was a weaker duplicate of the canonical schema in `src/lib/validation.ts`. The `jules.ts` copy accepted any string for `id` (not UUID), any-length string for `apiKey` (no minimum), and any-length strings for tokens (no maximum). Any code path that happened to import from `jules.ts` would use the weaker schema for deserialization.
+**Learning:** Having multiple definitions of the same schema is a maintenance and security hazard. Schema drift means one copy can become less strict over time, creating an exploitable inconsistency.
+**Prevention:** Removed the duplicate `ProviderProfileSchema` from `jules.ts` and added an import from `validation.ts` instead. There is now a single source of truth for all profile validation with consistent, strict rules.
+

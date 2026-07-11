@@ -109,6 +109,10 @@ export const useStore = create<AppState>()(
         }),
         {
             name: "ag-app-storage",
+            // Security: Only persist non-sensitive UI preferences.
+            // Accounts (with API keys/tokens) are persisted separately via
+            // saveAccounts() into 'jules_accounts_v1', not here.
+            partialize: (state) => ({ theme: state.theme }),
             onRehydrateStorage: () => (state: AppState | undefined) => {
                 if (state) {
                     document.documentElement.setAttribute("data-theme", state.theme === "phantom-stealth" ? "" : state.theme);

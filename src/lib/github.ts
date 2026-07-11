@@ -109,7 +109,6 @@ export function mapGithubRepo(r: GithubRepo): GithubRepo {
 }
 
 export async function getUserRepos() {
-    console.log("[getUserRepos] Starting concurrent fetch...");
     try {
         const octokit = getOctokit();
         const firstPageResponse = await octokit.request("GET /user/repos", {
@@ -408,8 +407,11 @@ export async function unsubscribeFromThread(threadId: string) {
 export async function getNotificationSubjectDetail(url: string) {
     try {
         const octokit = getOctokit();
-        // Extract the path from the full API URL
+        // Security: Validate the URL is a legitimate GitHub API endpoint before use
         const apiUrl = new URL(url);
+        if (apiUrl.hostname !== "api.github.com") {
+            throw new Error(`Blocked request to non-GitHub API host: ${apiUrl.hostname}`);
+        }
         const path = apiUrl.pathname;
 
         const response = await octokit.request(`GET ${path}`, {

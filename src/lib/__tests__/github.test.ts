@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getUserRepos, getStarredRepos } from "../github";
+import { getUserRepos, getStarredRepos, getNotificationSubjectDetail } from "../github";
 import { Octokit } from "@octokit/core";
 
 // Mock Octokit
@@ -38,11 +38,9 @@ describe("GitHub API - Concurrent Pagination", () => {
         
         const mockRequest = vi.mocked(Octokit.prototype.request);
         
-        // Mock Page 1
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockRequest.mockResolvedValueOnce({ data: page1 } as any);
         
-        // Mock Pages 2-10
         for (let i = 2; i <= 10; i++) {
             if (i === 2) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,10 +53,8 @@ describe("GitHub API - Concurrent Pagination", () => {
 
         const repos = await getUserRepos();
 
-        // 1 (first page) + 9 (batch) = 10 calls
         expect(mockRequest).toHaveBeenCalledTimes(10);
         
-        // Verify we requested pages concurrently
         const requestedPages = mockRequest.mock.calls.map(call => call[1]?.page);
         expect(requestedPages).toContain(1);
         expect(requestedPages).toContain(2);
@@ -81,11 +77,9 @@ describe("GitHub API - Concurrent Pagination", () => {
         
         const mockRequest = vi.mocked(Octokit.prototype.request);
         
-        // Mock Page 1
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockRequest.mockResolvedValueOnce({ data: page1 } as any);
         
-        // Mock Pages 2-5
         for (let i = 2; i <= 5; i++) {
             if (i === 2) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,7 +92,6 @@ describe("GitHub API - Concurrent Pagination", () => {
 
         const repos = await getStarredRepos();
 
-        // 1 (first page) + 4 (batch) = 5 calls
         expect(mockRequest).toHaveBeenCalledTimes(5);
         
         const requestedPages = mockRequest.mock.calls.map(call => call[1]?.page);
@@ -107,5 +100,34 @@ describe("GitHub API - Concurrent Pagination", () => {
         expect(requestedPages).toContain(5);
         
         expect(repos).toHaveLength(110);
+    });
+});
+
+describe("GitHub API - Security: URL Injection Guard", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it("getNotificationSubjectDetail should reject URLs pointing to non-GitHub API hosts", async () => {
+        // An attacker-controlled notification could embed a crafted URL
+        await expect(
+            getNotificationSubjectDetail("https://attacker.com/users/victim/repos")
+        ).rejects.toThrow("Blocked request to non-GitHub API host: attacker.com");
+    });
+
+    it("getNotificationSubjectDetail should reject localhost URLs", async () => {
+        await expect(
+            getNotificationSubjectDetail("https://localhost:8080/api/admin")
+        ).rejects.toThrow("Blocked request to non-GitHub API host: localhost");
+    });
+
+    it("getNotificationSubjectDetail should accept valid api.github.com URLs", async () => {
+        const mockRequest = vi.mocked(Octokit.prototype.request);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mockRequest.mockResolvedValueOnce({ data: { title: "Test PR", body: "Test body" } } as any);
+
+        const result = await getNotificationSubjectDetail("https://api.github.com/repos/owner/repo/pulls/1");
+        expect(result).toEqual({ title: "Test PR", body: "Test body" });
+        expect(mockRequest).toHaveBeenCalledWith("GET /repos/owner/repo/pulls/1", expect.anything());
     });
 });
