@@ -32,14 +32,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+    if (isOpen && !prevIsOpen) {
+        setPrevIsOpen(true);
+        setAccounts(storeAccounts);
+        setError(null);
+        setTestStatus({ jules: "idle", github: "idle", hf: "idle" });
+    } else if (!isOpen && prevIsOpen) {
+        setPrevIsOpen(false);
+    }
+
     useEffect(() => {
-        if (isOpen) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setAccounts(storeAccounts);
-            setError(null);
-            setTestStatus({ jules: "idle", github: "idle", hf: "idle" });
-        }
-    }, [isOpen, storeAccounts]);
+        if (!isOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose();
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen, onClose]);
 
     const handleTest = async (provider: "jules" | "github" | "hf") => {
         setTestStatus(prev => ({ ...prev, [provider]: "testing" }));
@@ -166,14 +179,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
             <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Key className="w-5 h-5 text-primary" />
-                        Provider Profiles
+                        Credentials & Providers
                     </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors" aria-label="Close settings">
+                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors" aria-label="Close modal">
                         <X className="h-5 w-5 opacity-70" />
                     </button>
                 </div>

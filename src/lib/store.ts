@@ -2,15 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getAccounts, saveAccounts as persistAccounts, type ProviderProfile } from "./jules";
 
+import { queryClient } from "./queryClient";
+import type { HFModel, HFSpace } from "./huggingface";
+import type { UnifiedNotification } from "@/hooks/useInbox";
+
 export type ThemeType = "phantom-stealth" | "event-horizon" | "toxic-neon" | "titanium-brutalist";
 
 interface AppCache {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    repos: { data: any[]; timestamp: number };
-    starred: { data: any[]; timestamp: number };
-    inbox: { data: any[]; timestamp: number };
-    huggingface: { data: { models: any[]; spaces: any[] }; timestamp: number };
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+    inbox: { data: UnifiedNotification[]; timestamp: number };
+    huggingface: { data: { models: HFModel[]; spaces: HFSpace[] }; timestamp: number };
 }
 
 interface AppState {
@@ -25,7 +25,7 @@ interface AppState {
 
     // Global Cache (Legacy - being replaced by TanStack)
     cache: AppCache;
-    updateCache: (key: keyof AppCache, data: unknown) => void;
+    updateCache: <K extends keyof AppCache>(key: K, data: AppCache[K]["data"]) => void;
     clearCache: () => void;
 
     // Auth Status
@@ -55,6 +55,7 @@ export const useStore = create<AppState>()(
                 set({ activeAccount: currentActive });
                 // Reset token status on account change
                 set({ tokenStatus: { jules: "missing", github: "missing", hf: "missing" } });
+                queryClient.invalidateQueries();
             },
             activeAccount: getAccounts().find(a => a.isActive) || getAccounts()[0] || null,
             setActiveAccount: (id: string) => {
@@ -66,14 +67,14 @@ export const useStore = create<AppState>()(
                 set({ accounts: updated, activeAccount: updated.find(a => a.isActive) || null });
                 // Reset status on account switch
                 set({ tokenStatus: { jules: "missing", github: "missing", hf: "missing" } });
-                // Clear cache on account switch to prevent data leakage between profiles
+                // Clear legacy cache on account switch to prevent data leakage between profiles
                 get().clearCache();
+                // Invalidate all TanStack Query caches for the new identity
+                queryClient.invalidateQueries();
             },
 
             // Cache Logic
             cache: {
-                repos: { data: [], timestamp: 0 },
-                starred: { data: [], timestamp: 0 },
                 inbox: { data: [], timestamp: 0 },
                 huggingface: { data: { models: [], spaces: [] }, timestamp: 0 },
             },
@@ -88,8 +89,6 @@ export const useStore = create<AppState>()(
             clearCache: () => {
                 set({
                     cache: {
-                        repos: { data: [], timestamp: 0 },
-                        starred: { data: [], timestamp: 0 },
                         inbox: { data: [], timestamp: 0 },
                         huggingface: { data: { models: [], spaces: [] }, timestamp: 0 },
                     }

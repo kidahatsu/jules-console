@@ -46,8 +46,16 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
         if (isOpen && repo) {
             loadBranches();
             setSourceBranch(repo.default_branch);
+
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === "Escape") {
+                    onClose();
+                }
+            };
+            window.addEventListener("keydown", handleKeyDown);
+            return () => window.removeEventListener("keydown", handleKeyDown);
         }
-    }, [isOpen, repo, loadBranches]);
+    }, [isOpen, repo, loadBranches, onClose]);
 
     const handleCreateBranch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,7 +99,7 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
     if (!isOpen || !repo) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
             <div className="w-full max-w-lg bg-card border border-border rounded-xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 h-[600px]">
                 <div className="flex items-center justify-between p-4 border-b border-border bg-zinc-900/50">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -104,10 +112,11 @@ export function BranchManagerModal({ isOpen, onClose, repo }: BranchManagerModal
                             onClick={loadBranches}
                             disabled={isLoading}
                             className="p-1 hover:bg-white/10 rounded-lg transition-colors text-zinc-400 hover:text-white"
+                            aria-label="Refresh branches"
                         >
                             <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
-                        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors text-zinc-400 hover:text-white">
+                        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors text-zinc-400 hover:text-white" aria-label="Close modal">
                             <X className="h-5 w-5 opacity-70" />
                         </button>
                     </div>

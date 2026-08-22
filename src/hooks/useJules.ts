@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { z } from "zod";
 import { createJulesSession, listJulesSessions, deleteJulesSession, getJulesSession, getActiveAccount, mapJulesSession, type CreateSessionParams, type JulesSession, type Session } from "@/lib/jules";
+import { CreateSessionSchema } from "@/lib/validation";
 
 export const SessionSchema = z.object({
     id: z.string(),
@@ -130,17 +131,18 @@ export function useJules() {
         setCreating(true);
         setError(null);
         try {
-            const apiResponse = await createJulesSession(params);
-            const realId = apiResponse.name.split("/").pop();
+            const validated = CreateSessionSchema.parse(params);
+            const apiResponse = await createJulesSession(validated);
+            const realId = apiResponse.name.split("/").pop() || apiResponse.name;
 
             const newSession: Session = {
                 id: realId,
                 status: "RUNNING",
                 createdAt: new Date().toISOString(),
                 duration: "0s",
-                ...params,
-                branch: params.branch || "main",
-                automationMode: params.automationMode
+                ...validated,
+                branch: validated.branch || "main",
+                automationMode: validated.automationMode
             };
 
             setSessions(prev => [newSession, ...prev]);

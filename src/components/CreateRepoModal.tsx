@@ -26,6 +26,13 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
 
     useEffect(() => {
         if (isOpen) {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === "Escape") {
+                    onClose();
+                }
+            };
+            window.addEventListener("keydown", handleKeyDown);
+
             // Priority 1: Props
             if (initialTemplate) {
                 setFormData(prev => ({
@@ -34,13 +41,15 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
                     templateRepo: initialTemplate.name,
                     name: `${initialTemplate.name}-copy`
                 }));
-                return;
+                return () => window.removeEventListener("keydown", handleKeyDown);
             }
 
             // Priority 2: Clipboard (if permissible)
             checkClipboard();
+
+            return () => window.removeEventListener("keydown", handleKeyDown);
         }
-    }, [isOpen, initialTemplate]);
+    }, [isOpen, initialTemplate, onClose]);
 
     const checkClipboard = async () => {
         try {
@@ -93,14 +102,14 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
             <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between p-4 border-b border-border">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                         <BookCopy className="w-5 h-5 text-primary" />
                         Create from Template
                     </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+                    <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg transition-colors" aria-label="Close modal">
                         <X className="h-5 w-5 opacity-70" />
                     </button>
                 </div>
@@ -136,8 +145,10 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Template Owner</label>
+                            <label htmlFor="template-owner-input" className="text-sm font-medium text-zinc-300">Template Owner</label>
                             <input
+                                id="template-owner-input"
+                                aria-label="Template Owner"
                                 required
                                 type="text"
                                 value={formData.templateOwner}
@@ -147,8 +158,10 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Template Repo</label>
+                            <label htmlFor="template-repo-input" className="text-sm font-medium text-zinc-300">Template Repo</label>
                             <input
+                                id="template-repo-input"
+                                aria-label="Template Repository Name"
                                 required
                                 type="text"
                                 value={formData.templateRepo}
@@ -160,8 +173,10 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-300">New Repository Name</label>
+                        <label htmlFor="new-repo-name-input" className="text-sm font-medium text-zinc-300">New Repository Name</label>
                         <input
+                            id="new-repo-name-input"
+                            aria-label="New Repository Name"
                             required
                             type="text"
                             value={formData.name}
@@ -172,8 +187,10 @@ export function CreateRepoModal({ isOpen, onClose, onSuccess, initialTemplate }:
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-300">Description</label>
+                        <label htmlFor="new-repo-desc-input" className="text-sm font-medium text-zinc-300">Description</label>
                         <textarea
+                            id="new-repo-desc-input"
+                            aria-label="Repository Description"
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                             className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm min-h-[80px]"

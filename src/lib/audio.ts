@@ -8,8 +8,13 @@ class AudioEngine {
 
     private getContext() {
         if (!this.context) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+            if (AudioContextClass) {
+                this.context = new AudioContextClass();
+            }
+        }
+        if (this.context && this.context.state === "suspended") {
+            this.context.resume().catch(() => {});
         }
         return this.context;
     }
@@ -19,6 +24,7 @@ class AudioEngine {
      */
     playClick() {
         const ctx = this.getContext();
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -41,6 +47,7 @@ class AudioEngine {
      */
     playSuccess() {
         const ctx = this.getContext();
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -63,6 +70,7 @@ class AudioEngine {
      */
     playError() {
         const ctx = this.getContext();
+        if (!ctx) return;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 

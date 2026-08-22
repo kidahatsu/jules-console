@@ -58,7 +58,12 @@ export function getAccounts(): ProviderProfile[] {
 }
 
 export function saveAccounts(accounts: ProviderProfile[]) {
-    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(accounts));
+    const validated = z.array(ProviderProfileSchema).safeParse(accounts);
+    if (!validated.success) {
+        console.error("Refusing to save invalid account profiles:", validated.error.format());
+        return;
+    }
+    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(validated.data));
 }
 
 export function getActiveAccount(): ProviderProfile | null {

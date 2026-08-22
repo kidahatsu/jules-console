@@ -28,11 +28,9 @@ export function useVisibleRange(totalItems: number, itemsPerBatch: number = 12) 
         return () => observer.disconnect();
     }, [loadMore]);
 
-    // Reset when total items change significantly (e.g. filter change)
-    // Note: We track totalItems in state to reset visibleCount when totalItems change
-    const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
-    if (prevTotalItems !== totalItems) {
-        setPrevTotalItems(totalItems);
+    const [prevTotal, setPrevTotal] = useState(totalItems);
+    if (totalItems !== prevTotal) {
+        setPrevTotal(totalItems);
         setVisibleCount(itemsPerBatch);
     }
 

@@ -1,28 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronDown, User, Check } from "lucide-react";
-import { getAccounts, saveAccounts, type JulesAccount } from "@/lib/jules";
+import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export function JulesAccountSwitcher() {
-    const [accounts, setAccounts] = useState<JulesAccount[]>(() => getAccounts());
+    const accounts = useStore(state => state.accounts);
+    const activeAccount = useStore(state => state.activeAccount);
+    const setActiveAccount = useStore(state => state.setActiveAccount);
     const [isOpen, setIsOpen] = useState(false);
 
-    useEffect(() => {
-        // Keep in sync if localStorage changes externally
-        const handleStorage = () => setAccounts(getAccounts());
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, []);
-
-    const activeAccount = accounts.find(a => a.isActive) || accounts[0];
-
     const handleSwitch = (id: string) => {
-        const updated = accounts.map(a => ({
-            ...a,
-            isActive: a.id === id
-        }));
-        saveAccounts(updated);
-        window.location.reload();
+        setActiveAccount(id);
+        setIsOpen(false);
     };
 
     if (!activeAccount) return null;

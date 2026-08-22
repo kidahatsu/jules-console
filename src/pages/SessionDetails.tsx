@@ -35,23 +35,47 @@ export default function SessionDetails() {
 
     useEffect(() => {
         if (!id) return;
-        const load = async () => {
+
+        let isSubscribed = true;
+
+        const load = async (isInitial = false) => {
             try {
-                setLoading(true);
+                if (isInitial) setLoading(true);
                 const [sessionData, activityData] = await Promise.all([
                     getJulesSession(id),
                     getJulesActivities(id).catch(() => ({ activities: [] }))
                 ]);
+                if (!isSubscribed) return;
                 setSession(sessionData);
                 setActivities(activityData.activities || []);
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load session details");
+                if (isSubscribed && isInitial) {
+                    setError(err instanceof Error ? err.message : "Failed to load session details");
+                }
             } finally {
-                setLoading(false);
+                if (isSubscribed && isInitial) {
+                    setLoading(false);
+                }
             }
         };
-        load();
-    }, [id]);
+
+        load(true);
+
+        // Auto-refresh activities every 5s if session is active
+        const isTerminal = session?.state === "SUCCEEDED" || session?.state === "COMPLETED" || session?.state === "FAILED" || session?.state === "CANCELLED";
+        if (isTerminal) {
+            return () => { isSubscribed = false; };
+        }
+
+        const interval = setInterval(() => {
+            load(false);
+        }, 5000);
+
+        return () => {
+            isSubscribed = false;
+            clearInterval(interval);
+        };
+    }, [id, session?.state]);
 
     if (loading) return (
         <div className="flex flex-col h-full items-center justify-center gap-4">
@@ -126,7 +150,7 @@ export default function SessionDetails() {
                                     components={{
                                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                         a: ({ node, ...props }) => (
-                                            <a {...props} target="_blank" rel="noopener noreferrer" />
+                                            <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold" />
                                         )
                                     }}
                                 >

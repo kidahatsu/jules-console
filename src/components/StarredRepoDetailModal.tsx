@@ -27,6 +27,18 @@ export function StarredRepoDetailModal({ isOpen, onClose, repo, onUpdateReview, 
         setNotes(repo.notes || "");
     }, [repo.notes]);
 
+    useEffect(() => {
+        if (isOpen) {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === "Escape") {
+                    onClose();
+                }
+            };
+            window.addEventListener("keydown", handleKeyDown);
+            return () => window.removeEventListener("keydown", handleKeyDown);
+        }
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const handleSave = async () => {
@@ -73,7 +85,7 @@ export function StarredRepoDetailModal({ isOpen, onClose, repo, onUpdateReview, 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md" role="dialog" aria-modal="true">
             <motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -106,10 +118,11 @@ export function StarredRepoDetailModal({ isOpen, onClose, repo, onUpdateReview, 
                             target="_blank" 
                             rel="noopener noreferrer" 
                             className="p-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition-all"
+                            aria-label="Open repository on GitHub"
                         >
                             <ExternalLink className="w-5 h-5" />
                         </a>
-                        <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-xl text-zinc-500 hover:text-white transition-all">
+                        <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-xl text-zinc-500 hover:text-white transition-all" aria-label="Close modal">
                             <X className="w-6 h-6" />
                         </button>
                     </div>

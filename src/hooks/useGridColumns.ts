@@ -4,24 +4,31 @@ import { useState, useEffect } from "react";
  * Hook to determine the number of grid columns based on tailwind breakpoints.
  * Matches: grid-cols-1 md:grid-cols-2 xl:grid-cols-3
  */
+function getGridColumns() {
+    if (typeof window === "undefined") return 1;
+    const width = window.innerWidth;
+    if (width >= 1280) return 3; // xl
+    if (width >= 768) return 2;  // md
+    return 1;
+}
+
 export function useGridColumns() {
-    const [columns, setColumns] = useState(1);
+    const [columns, setColumns] = useState(getGridColumns);
 
     useEffect(() => {
-        const updateColumns = () => {
-            const width = window.innerWidth;
-            if (width >= 1280) { // xl
-                setColumns(3);
-            } else if (width >= 768) { // md
-                setColumns(2);
-            } else {
-                setColumns(1);
-            }
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        const handleResize = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                setColumns(getGridColumns());
+            }, 100);
         };
 
-        updateColumns();
-        window.addEventListener("resize", updateColumns);
-        return () => window.removeEventListener("resize", updateColumns);
+        window.addEventListener("resize", handleResize);
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            window.removeEventListener("resize", handleResize);
+        };
     }, []);
 
     return columns;

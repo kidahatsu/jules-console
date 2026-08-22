@@ -7,7 +7,6 @@ import { githubApiToWebUrl } from "@/lib/utils";
 import { CachePolicy } from "@/lib/cache";
 
 export interface UnifiedNotification {
-// ... UnifiedNotification interface ...
     id: string;
     source: "GITHUB" | "HUGGINGFACE";
     category: string; // GitHub 'reason' or HF 'status'
@@ -21,6 +20,24 @@ export interface UnifiedNotification {
     createdAt: string;
     unread: boolean;
     raw: unknown;
+}
+
+interface GithubNotificationItem {
+    id: string;
+    reason: string;
+    unread: boolean;
+    updated_at: string;
+    subject: {
+        title: string;
+        url: string;
+        type: string;
+    };
+    repository: {
+        full_name: string;
+        owner: {
+            login: string;
+        };
+    };
 }
 
 export function useInbox() {
@@ -80,21 +97,20 @@ export function useInbox() {
             const fetchErrors: string[] = [];
 
             if (results[0].status === "fulfilled") {
-                const ghData = results[0].value;
+                const ghData = results[0].value as unknown as GithubNotificationItem[];
                 if (!skipGh) setTokenStatus("github", "valid");
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                mappedGh = (ghData as any[]).map(item => {
+                mappedGh = (ghData || []).map(item => {
                     return {
                         id: item.id,
-                        source: "GITHUB",
+                        source: "GITHUB" as const,
                         category: item.reason,
-                        title: item.subject.title,
+                        title: item.subject?.title || "Notification",
                         body: "",
-                        type: item.subject.type === "PullRequest" ? "PR" : item.subject.type === "Issue" ? "ISSUE" : "OTHER",
-                        author: item.repository.owner.login,
-                        repo: item.repository.full_name,
-                        url: githubApiToWebUrl(item.subject.url),
-                        apiUrl: item.subject.url,
+                        type: item.subject?.type === "PullRequest" ? ("PR" as const) : item.subject?.type === "Issue" ? ("ISSUE" as const) : ("OTHER" as const),
+                        author: item.repository?.owner?.login || "Unknown",
+                        repo: item.repository?.full_name || "Unknown Repo",
+                        url: githubApiToWebUrl(item.subject?.url || ""),
+                        apiUrl: item.subject?.url,
                         createdAt: item.updated_at,
                         unread: item.unread,
                         raw: item
@@ -102,12 +118,16 @@ export function useInbox() {
                 });
             } else {
                 const err = results[0].reason as { status?: number };
-                if (err?.status === 401 || err?.status === 403) {
+                if (err?.status === 401) {
                     setTokenStatus("github", "invalid");
+                    fetchErrors.push("GitHub token is invalid or expired.");
+                } else if (err?.status === 403) {
+                    setTokenStatus("github", "insufficient_permissions");
+                    fetchErrors.push("GitHub notifications require the 'notifications' scope.");
                 } else {
                     console.error("GitHub Fetch Error:", results[0].reason instanceof Error ? results[0].reason.message : "Unknown error");
+                    fetchErrors.push("GitHub signals offline.");
                 }
-                fetchErrors.push("GitHub signals offline.");
             }
 
             if (results[1].status === "fulfilled") {

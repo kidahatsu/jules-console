@@ -52,7 +52,18 @@ export const StarredReviewService = {
      * Saves a full map of reviews to local storage.
      */
     saveReviews: (data: StarredReviewMap): void => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        // Convert numeric keys to string keys for schema validation
+        const stringKeyed: Record<string, StarredReview> = {};
+        for (const [k, v] of Object.entries(data)) {
+            stringKeyed[String(k)] = v;
+        }
+
+        const validated = StarredReviewMapSchema.safeParse(stringKeyed);
+        if (!validated.success) {
+            console.error("Refusing to save invalid starred reviews schema:", validated.error.format());
+            return;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(validated.data));
     },
 
     /**

@@ -57,20 +57,27 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
         }
     }, [repo, isOwnedRepo, isHFAsset, isInboxTask]);
 
-    // Reset state when modal opens/closes or repo changes
+    // Reset state when modal opens/closes or repo changes & handle Escape key
     useEffect(() => {
         if (isOpen) {
             checkForPR();
             if (inboxContext) {
                 setActionType("fix");
             }
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === "Escape") {
+                    onClose();
+                }
+            };
+            window.addEventListener("keydown", handleKeyDown);
+            return () => window.removeEventListener("keydown", handleKeyDown);
         } else {
             setPrNumber(null);
             setResult(null); 
             setError(null);
             setCustomPrompt("");
         }
-    }, [isOpen, repo, checkForPR, inboxContext]);
+    }, [isOpen, repo, checkForPR, inboxContext, onClose]);
 
     if (!isOpen || !repo) return null;
 
@@ -155,14 +162,14 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
             <div className={`w-full max-w-md bg-card border border-border rounded-xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-300 max-h-[90vh]`}>
                 <div className="flex items-center justify-between p-4 border-b border-border bg-zinc-950/30">
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Sparkles className={`w-5 h-5 ${isOwnedRepo && !isHFAsset ? 'text-indigo-400' : isHFAsset ? 'text-amber-500' : 'text-emerald-400'}`} />
                         {isOwnedRepo && !isHFAsset ? "Jules AI Action" : isHFAsset ? "Jules HF Audit" : "Jules Insight Session"}
                     </h3>
-                    <button onClick={reset} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+                    <button onClick={reset} className="p-1 hover:bg-white/10 rounded-lg transition-colors" aria-label="Close modal">
                         <X className="h-5 w-5 opacity-70" />
                     </button>
                 </div>
@@ -282,8 +289,10 @@ export function JulesActionModal({ isOpen, onClose, repo, onSessionStarted, inbo
                     {!result ? (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Analysis Scope</label>
+                                <label htmlFor="analysis-scope-prompt" className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Analysis Scope</label>
                                 <textarea
+                                    id="analysis-scope-prompt"
+                                    aria-label="Analysis Scope Prompt"
                                     value={customPrompt}
                                     onChange={(e) => setCustomPrompt(e.target.value)}
                                     className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm min-h-[120px] shadow-inner"

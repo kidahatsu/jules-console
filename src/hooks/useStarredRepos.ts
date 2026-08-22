@@ -30,7 +30,6 @@ export interface StarredRepo {
 
 export function useStarredRepos() {
     const activeAccount = useStore(state => state.activeAccount);
-    const updateCache = useStore(state => state.updateCache);
     const queryClient = useQueryClient();
 
     const queryKey = useMemo(() => ["starred-repos", activeAccount?.id], [activeAccount?.id]);
@@ -79,9 +78,8 @@ export function useStarredRepos() {
     // 2. Persist Updates
     const saveToLocalAndCache = useCallback((data: StarredRepo[]) => {
         StarredReviewService.persistList(data);
-        updateCache("starred", data);
         refetch(); // Refresh list to reflect persistence changes
-    }, [updateCache, refetch]);
+    }, [refetch]);
 
     const updateReview = (id: number, status: ReviewStatus, notes?: string) => {
         const next = repos.map(repo => 
