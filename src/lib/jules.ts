@@ -1,9 +1,87 @@
 import { z } from "zod";
 import { env } from "./env";
 import { ProviderProfileSchema } from "./validation";
+import {
+    encryptPayload,
+    decryptPayload,
+    setSessionAccounts,
+    getSessionAccounts,
+    clearSessionAccounts,
+    _resetDeviceVaultCacheForTesting,
+    type EncryptedVaultEnvelope,
+} from "./cryptoVault";
 
-const JULES_API_URL = "/api/jules";
-const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
+export const DIRECT_JULES_API_URL = "https://jules.googleapis.com/v1alpha";
+export const PROXY_JULES_API_URL = "/api/jules";
+export const STORAGE_KEY_ACCOUNTS = "jules_accounts_v1";
+
+let isLocalProxyAvailable: boolean | null = null;
+let inMemoryAccounts: ProviderProfile[] | null = null;
+let masterPasswordCache: string | undefined = undefined;
+
+export function setMasterPassword(password?: string): void {
+    masterPasswordCache = password;
+}
+
+export function setProxyAvailable(available: boolean | null): void {
+    isLocalProxyAvailable = available;
+}
+
+export function _resetAccountCacheForTesting(): void {
+    inMemoryAccounts = null;
+    masterPasswordCache = undefined;
+    isLocalProxyAvailable = null;
+    clearSessionAccounts();
+    _resetDeviceVaultCacheForTesting();
+}
+
+/**
+ * Returns the Jules API base URL.
+ * Routes directly to Google Jules API in production builds or when local proxy is not available.
+ * Preserves the local Vite dev proxy in development.
+ */
+export function getJulesBaseUrl(): string {
+    if (import.meta.env.PROD) {
+        return DIRECT_JULES_API_URL;
+    }
+    if (isLocalProxyAvailable === false) {
+        return DIRECT_JULES_API_URL;
+    }
+    return PROXY_JULES_API_URL;
+}
+
+/**
+ * Probes the local dev proxy to determine if /api/jules is operational.
+ */
+export async function detectJulesProxy(): Promise<boolean> {
+    if (import.meta.env.PROD) {
+        isLocalProxyAvailable = false;
+        return false;
+    }
+    try {
+        const res = await fetch(`${PROXY_JULES_API_URL}/sessions?pageSize=1`, {
+            method: "HEAD",
+            headers: { "x-goog-api-key": "probe" },
+        }).catch(() => null);
+
+        if (!res) {
+            isLocalProxyAvailable = false;
+            return false;
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("text/html") || res.status === 404 || res.status === 405) {
+            isLocalProxyAvailable = false;
+            return false;
+        }
+
+        isLocalProxyAvailable = true;
+        return true;
+    } catch {
+        isLocalProxyAvailable = false;
+        return false;
+    }
+}
 
 export interface ProviderProfile {
     id: string;
@@ -15,7 +93,6 @@ export interface ProviderProfile {
 }
 
 export function getAccounts(): ProviderProfile[] {
-    const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
     const initialAccount: ProviderProfile = {
         id: "default",
         name: "Default Account",
@@ -24,24 +101,68 @@ export function getAccounts(): ProviderProfile[] {
         hfToken: env.HF_TOKEN,
         isActive: true,
     };
+
+    if (inMemoryAccounts !== null) {
+        return inMemoryAccounts;
+    }
+
+    const sessionAccs = getSessionAccounts();
+    if (sessionAccs !== null) {
+        inMemoryAccounts = sessionAccs;
+        return sessionAccs;
+    }
+
+    let saved: string | null = null;
+    try {
+        if (typeof localStorage !== "undefined") {
+            saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+        }
+    } catch {
+        // Storage restricted
+    }
+
     if (!saved) {
-        // Migration or initial state: seed with env keys if available
         return [initialAccount];
     }
+
     try {
         const parsed = JSON.parse(saved);
-        // Ensure new fields exist for legacy saved accounts before validation
+
+        // If encrypted at rest, read active session storage or in-memory cache
+        if (parsed && typeof parsed === "object" && parsed.__encrypted === true) {
+            if (inMemoryAccounts !== null) {
+                return inMemoryAccounts;
+            }
+            const sAccs = getSessionAccounts();
+            if (sAccs !== null) {
+                inMemoryAccounts = sAccs;
+                return sAccs;
+            }
+            if (parsed.ciphertext) {
+                // Trigger async background decryption for subsequent reads
+                void getAccountsSecure();
+            }
+            return inMemoryAccounts || [initialAccount];
+        }
+
+        // Legacy plaintext in localStorage -> automatically sanitize and upgrade!
         const migrated = Array.isArray(parsed) ? parsed.map((a: unknown) => {
             if (typeof a !== 'object' || a === null) return a;
             const profile = a as Record<string, unknown>;
             return {
                 ...profile,
-                githubToken: profile.githubToken || env.GITHUB_TOKEN,
-                hfToken: profile.hfToken || env.HF_TOKEN,
+                apiKey: (profile.apiKey as string) || env.JULES_API_KEY,
+                githubToken: (profile.githubToken as string) || env.GITHUB_TOKEN,
+                hfToken: (profile.hfToken as string) || env.HF_TOKEN,
             };
         }) : parsed;
+
         const result = z.array(ProviderProfileSchema).safeParse(migrated);
         if (result.success) {
+            inMemoryAccounts = result.data;
+            setSessionAccounts(result.data);
+            // Upgrade legacy plaintext to encrypted envelope at rest
+            void saveAccountsSecure(result.data);
             return result.data;
         } else {
             console.error("Invalid local storage accounts schema");
@@ -59,7 +180,162 @@ export function saveAccounts(accounts: ProviderProfile[]) {
         console.error("Refusing to save invalid account profiles:", validated.error.format());
         return;
     }
-    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(validated.data));
+
+    inMemoryAccounts = validated.data;
+    setSessionAccounts(validated.data);
+
+    // Prevent raw keys from ever sitting in plaintext in localStorage
+    if (typeof localStorage !== "undefined") {
+        try {
+            const existing = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+            let hasValidEncryptedCiphertext = false;
+            if (existing) {
+                try {
+                    const parsed = JSON.parse(existing);
+                    if (parsed && typeof parsed === "object" && parsed.__encrypted === true && parsed.ciphertext) {
+                        hasValidEncryptedCiphertext = true;
+                    }
+                } catch {
+                    // Ignore JSON parse error
+                }
+            }
+
+            // Only set pending if not already holding valid encrypted ciphertext
+            if (!hasValidEncryptedCiphertext) {
+                localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify({
+                    __encrypted: true,
+                    version: 1,
+                    algorithm: "AES-GCM-256",
+                    pending: true,
+                }));
+            }
+        } catch {
+            // Storage quota/restriction
+        }
+    }
+
+    // Persist encrypted envelope asynchronously via Web Crypto AES-GCM 256 PBKDF2
+    void saveAccountsSecure(validated.data);
+}
+
+export async function saveAccountsSecure(accounts: ProviderProfile[], masterPassword?: string): Promise<void> {
+    const validated = z.array(ProviderProfileSchema).safeParse(accounts);
+    if (!validated.success) {
+        console.error("Refusing to save invalid account profiles:", validated.error.format());
+        return;
+    }
+
+    inMemoryAccounts = validated.data;
+    setSessionAccounts(validated.data);
+
+    if (typeof localStorage !== "undefined") {
+        try {
+            const envelope = await encryptPayload(validated.data, masterPassword || masterPasswordCache);
+            localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(envelope));
+        } catch (err) {
+            console.error("Failed to encrypt accounts for localStorage:", err instanceof Error ? err.message : "Unknown error");
+        }
+    }
+}
+
+export async function getAccountsSecure(masterPassword?: string): Promise<ProviderProfile[]> {
+    if (inMemoryAccounts !== null) {
+        return inMemoryAccounts;
+    }
+
+    const sessionAccs = getSessionAccounts();
+    if (sessionAccs !== null) {
+        inMemoryAccounts = sessionAccs;
+        return sessionAccs;
+    }
+
+    const initialAccount: ProviderProfile = {
+        id: "default",
+        name: "Default Account",
+        apiKey: env.JULES_API_KEY,
+        githubToken: env.GITHUB_TOKEN,
+        hfToken: env.HF_TOKEN,
+        isActive: true,
+    };
+
+    if (typeof localStorage !== "undefined") {
+        const raw = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+        if (!raw) return [initialAccount];
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object" && parsed.__encrypted === true) {
+                if (parsed.pending || !parsed.ciphertext) {
+                    return inMemoryAccounts || [initialAccount];
+                }
+                const decrypted = await decryptPayload<ProviderProfile[]>(
+                    parsed as EncryptedVaultEnvelope,
+                    masterPassword || masterPasswordCache
+                );
+                const res = z.array(ProviderProfileSchema).safeParse(decrypted);
+                if (res.success) {
+                    inMemoryAccounts = res.data;
+                    setSessionAccounts(res.data);
+                    return res.data;
+                } else {
+                    console.error("Decrypted accounts failed schema validation");
+                    return inMemoryAccounts || [initialAccount];
+                }
+            } else {
+                return await migrateLegacyAccounts(masterPassword);
+            }
+        } catch (e) {
+            console.error("Failed to decrypt accounts from localStorage:", e instanceof Error ? e.message : "Unknown error");
+            return inMemoryAccounts || [initialAccount];
+        }
+    }
+
+    return [initialAccount];
+}
+
+export async function migrateLegacyAccounts(masterPassword?: string): Promise<ProviderProfile[]> {
+    const initialAccount: ProviderProfile = {
+        id: "default",
+        name: "Default Account",
+        apiKey: env.JULES_API_KEY,
+        githubToken: env.GITHUB_TOKEN,
+        hfToken: env.HF_TOKEN,
+        isActive: true,
+    };
+
+    if (typeof localStorage === "undefined") return inMemoryAccounts || [initialAccount];
+    const raw = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+    if (!raw) return inMemoryAccounts || [initialAccount];
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && parsed.__encrypted === true) {
+            return await getAccountsSecure(masterPassword);
+        }
+
+        const migrated = Array.isArray(parsed) ? parsed.map((a: unknown) => {
+            if (typeof a !== 'object' || a === null) return a;
+            const profile = a as Record<string, unknown>;
+            return {
+                ...profile,
+                apiKey: (profile.apiKey as string) || env.JULES_API_KEY,
+                githubToken: (profile.githubToken as string) || env.GITHUB_TOKEN,
+                hfToken: (profile.hfToken as string) || env.HF_TOKEN,
+            };
+        }) : parsed;
+
+        const result = z.array(ProviderProfileSchema).safeParse(migrated);
+        if (result.success) {
+            await saveAccountsSecure(result.data, masterPassword);
+            return result.data;
+        } else {
+            console.error("Invalid local storage accounts schema during migration");
+            return inMemoryAccounts || [initialAccount];
+        }
+    } catch (e) {
+        console.error("Failed to parse accounts during migration:", e instanceof Error ? e.message : "Unknown error");
+        return inMemoryAccounts || [initialAccount];
+    }
 }
 
 export function getActiveAccount(): ProviderProfile | null {
@@ -77,13 +353,6 @@ function getApiKey(): string {
 export function getGithubToken(): string {
     const active = getActiveAccount();
     return active?.githubToken || env.GITHUB_TOKEN;
-}
-
-// Helper to build the correct base path for the API
-function getJulesBaseUrl(): string {
-    // Always use the proxy path. The Jules API handles project context 
-    // via the API key (x-goog-api-key) rather than the URL path.
-    return JULES_API_URL;
 }
 
 export type SessionStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -281,8 +550,8 @@ export async function listJulesSessions(pageSize = 100) {
 }
 
 export async function getJulesSession(id: string) {
-    // API expects full resource name if not relative.
-    const url = id.includes("/") ? `${JULES_API_URL}/${id}` : `${getJulesBaseUrl()}/sessions/${id}`;
+    const cleanId = id.replace(/^\/?(api\/jules\/|v1alpha\/)?/, "");
+    const url = id.includes("/") ? `${getJulesBaseUrl()}/${cleanId}` : `${getJulesBaseUrl()}/sessions/${cleanId}`;
     const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -309,8 +578,8 @@ export async function getJulesSession(id: string) {
 }
 
 export async function deleteJulesSession(id: string) {
-    // API expects full resource name if not relative. 
-    const url = id.includes("/") ? `${JULES_API_URL}/${id}` : `${getJulesBaseUrl()}/sessions/${id}`;
+    const cleanId = id.replace(/^\/?(api\/jules\/|v1alpha\/)?/, "");
+    const url = id.includes("/") ? `${getJulesBaseUrl()}/${cleanId}` : `${getJulesBaseUrl()}/sessions/${cleanId}`;
     const response = await fetch(url, {
         method: "DELETE",
         headers: {
@@ -338,7 +607,8 @@ export async function deleteJulesSession(id: string) {
 }
 
 export async function getJulesActivities(sessionId: string) {
-    const url = sessionId.includes("/") ? `${JULES_API_URL}/${sessionId}/activities` : `${getJulesBaseUrl()}/sessions/${sessionId}/activities`;
+    const cleanId = sessionId.replace(/^\/?(api\/jules\/|v1alpha\/)?/, "");
+    const url = sessionId.includes("/") ? `${getJulesBaseUrl()}/${cleanId}/activities` : `${getJulesBaseUrl()}/sessions/${cleanId}/activities`;
     const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -360,7 +630,7 @@ export async function getJulesActivities(sessionId: string) {
 export async function testJulesKey(key: string) {
     if (!key || key.trim() === "") throw new Error("Key is required");
     
-    const response = await fetch(`${JULES_API_URL}/sessions?pageSize=1`, {
+    const response = await fetch(`${getJulesBaseUrl()}/sessions?pageSize=1`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",

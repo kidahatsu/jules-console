@@ -4,13 +4,15 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+export default defineConfig(({ mode, command }) => {
+  // Load only variables prefixed with VITE_ to prevent ambient host environment variable leakage
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const isProduction = mode === 'production' || command === 'build';
 
-  // Bridge standard system bash environment variables (with or without VITE_ prefix)
-  const julesKey = env.VITE_JULES_API_KEY || env.JULES_API_KEY || env.GEMINI_API_KEY || env.GOOGLE_API_KEY || '';
-  const githubToken = env.VITE_GITHUB_TOKEN || env.GITHUB_TOKEN || env.GH_TOKEN || '';
-  const hfToken = env.VITE_HF_TOKEN || env.HF_TOKEN || env.HUGGING_FACE_HUB_TOKEN || env.HUGGINGFACE_TOKEN || '';
+  // Ensure production builds NEVER embed secrets: credentials must be supplied exclusively by the end user via Settings UI
+  const julesKey = isProduction ? '' : (env.VITE_JULES_API_KEY || '');
+  const githubToken = isProduction ? '' : (env.VITE_GITHUB_TOKEN || '');
+  const hfToken = isProduction ? '' : (env.VITE_HF_TOKEN || '');
 
   return {
     define: {

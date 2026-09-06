@@ -1,7 +1,9 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { getAccountsSecure, detectJulesProxy } from "./lib/jules";
+import { useStore } from "./lib/store";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Sessions = lazy(() => import("./pages/Sessions"));
@@ -18,6 +20,20 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  useEffect(() => {
+    // Detect proxy status in development environments
+    detectJulesProxy().catch(() => {});
+
+    // Rehydrate encrypted accounts at rest on startup
+    getAccountsSecure().then(accounts => {
+      if (accounts && accounts.length > 0) {
+        useStore.getState().setAccounts(accounts);
+      }
+    }).catch(err => {
+      console.error("Failed to initialize secure accounts:", err);
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <BrowserRouter>
