@@ -17,7 +17,7 @@ interface AppState {
     theme: ThemeType;
     setTheme: (theme: ThemeType) => void;
     
-    // RepoGroup State
+    // Identity Profile State
     accounts: ProviderProfile[];
     setAccounts: (accounts: ProviderProfile[]) => void;
     activeAccount: ProviderProfile | null;
@@ -46,7 +46,7 @@ export const useStore = create<AppState>()(
                 set({ theme });
             },
 
-            // RepoGroup Logic
+            // Identity Profile Logic
             accounts: getAccounts(),
             setAccounts: (accounts: ProviderProfile[]) => {
                 persistAccounts(accounts);

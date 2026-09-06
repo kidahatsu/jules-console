@@ -13,7 +13,7 @@ Rename project and systematically refactor the internal context from "RepoGroup"
 4. **[Refactor] Concept (Lowercase/Camel)**: `repoGroup` -> `repoGroup` (code variables, logs)
    - Verification: `grep -r "\bfleet\b" .` returns only unrelated matches (if any).
 5. **[Asset] Asset Renaming**:
-   - `mv docs/assets/repo_master_architecture.png docs/assets/repo_master_architecture.png`
+   - `mv docs/assets/repo_master_architecture.png docs/assets/jules_console_architecture.png`
    - Update `README.md` and other files to reflect the new asset path.
 6. **[Config] Local Config Renaming**:
    - Update `src/components/SettingsModal.tsx` to use `repomaster.local.json` instead of `repomaster.local.json`.

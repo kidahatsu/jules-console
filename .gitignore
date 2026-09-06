@@ -1,10 +1,50 @@
-# Environment
+# Environment & Secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# AI Agents, LLM configs & scratchpads
+[Gg][Ee][Mm][Ii][Nn][Ii].[Mm][Dd]
+[Aa][Gg][Ee][Nn][Tt][Ss].[Mm][Dd]
+[Cc][Ll][Aa][Uu][Dd][Ee].[Mm][Dd]
+[Cc][Hh][Aa][Tt][Gg][Pp][Tt].[Mm][Dd]
+[Cc][Oo][Pp][Ii][Ll][Oo][Tt].[Mm][Dd]
+copilot-instructions.md
+.gemini/
+.agents/
+.claude/
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.cline/
+.clinerules
+.roo/
+.roomodes
+.continue/
+.aider*
+.antigravity/
+.scratch/
+scratch/
+*.scratch
+*.scratchpad
+.graphify/
+
+# Dependencies & Build outputs
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+*.tsbuildinfo
+.vite/
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -12,23 +52,47 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
+.vitest/
+test-results/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.sublime-project
+*.sublime-workspace
+.eslintcache
+.prettiercache
+.stylelintcache
 
-# Python
+# Operating System & Temporary files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Tt]humbs.db
+[Dd]esktop.ini
+*.tmp
+*.temp
+*.bak
+*~
+*.orig
+*.rej
+*.patch
+*.diff
+
+# Python & virtual environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -36,3 +100,5 @@ __pycache__/
 .venv/
 env/
 venv/
+
+

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getUserProfile } from "@/lib/github";
 import { useStore } from "@/lib/store";
 
-export interface GithubUser {
+interface GithubUser {
     login: string;
     id: number;
     avatar_url: string;

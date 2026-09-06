@@ -3,13 +3,13 @@ import type { ReviewStatus } from "@/hooks/useStarredRepos";
 
 const STORAGE_KEY = "starred_repo_reviews_v1";
 
-export const StarredReviewSchema = z.object({
+const StarredReviewSchema = z.object({
     status: z.enum(["TO_REVIEW", "REVIEWED", "REJECTED"]),
     notes: z.string().optional(),
     activeSessionId: z.string().optional(),
 });
 
-export const StarredReviewMapSchema = z.record(z.string(), StarredReviewSchema);
+const StarredReviewMapSchema = z.record(z.string(), StarredReviewSchema);
 
 export interface StarredReview {
     status: ReviewStatus;

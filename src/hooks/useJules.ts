@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { z } from "zod";
 import { createJulesSession, listJulesSessions, deleteJulesSession, getJulesSession, getActiveAccount, mapJulesSession, type CreateSessionParams, type JulesSession, type Session } from "@/lib/jules";
 import { CreateSessionSchema } from "@/lib/validation";
+import { useStore } from "@/lib/store";
 
-export const SessionSchema = z.object({
+const SessionSchema = z.object({
     id: z.string(),
     status: z.enum(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]),
     createdAt: z.string(),
@@ -14,7 +15,6 @@ export const SessionSchema = z.object({
     task: z.string(),
     repo: z.string().optional(),
 });
-import { useStore } from "@/lib/store";
 
 // Base storage key
 const STORAGE_KEY_PREFIX = "jules_sessions_";

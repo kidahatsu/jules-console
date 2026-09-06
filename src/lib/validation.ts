@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Schema for an individual Identity Profile (RepoGroup)
+ * Schema for an individual Identity Profile
  */
 export const ProviderProfileSchema = z.object({
     id: z.string().uuid().or(z.literal("default")),
@@ -21,6 +21,3 @@ export const CreateSessionSchema = z.object({
     branch: z.string().max(100, "Branch name is too long").default("main"),
     automationMode: z.enum(["AUTO_CREATE_PR", "AUTO_MERGE_PR"]).default("AUTO_CREATE_PR"),
 });
-
-export type ProviderProfileInput = z.infer<typeof ProviderProfileSchema>;
-export type CreateSessionInput = z.infer<typeof CreateSessionSchema>;

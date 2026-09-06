@@ -40,15 +40,34 @@ This document serves as the official "Source of Truth" for all features implemen
 
 ---
 
+## 🤗 Hugging Face Integration
+
+### 5. Models & Spaces Telemetry
+- **Model Monitoring**: Track download counts, likes, and pipeline tags for your published models.
+- **Space Runtimes**: View live status (running, building, sleeping) and hardware allocation for hosted Spaces.
+- **Community Discussions**: Read discussions and pull requests across models and Spaces.
+- **Jules Investigation**: Launch repoless Jules analysis sessions targeting Hugging Face assets.
+
+---
+
+## 📬 Unified Inbox
+
+### 6. Cross-Provider Activity Feed
+- **Consolidated Triage**: Aggregate GitHub notifications and Hugging Face discussions in a single inbox.
+- **Filtering**: Filter by source provider (GitHub or Hugging Face) and category (mentions, review requests, security alerts).
+- **Direct Dispatch**: Launch Jules investigation sessions directly from incoming alerts.
+
+---
+
 ## 🎨 UI/UX & Developer Experience
 
-### 5. Modern UI
+### 7. Modern UI
 - **Glassmorphism**: A dark-mode first design utilizing HSL variables, glass textures, and glowing accent states.
 - **Framer Motion Orchestration**: Fluid page transitions, modal entry/exit animations, and list reordering.
 - **Skeleton Loading**: Priority on perceived performance with skeleton states instead of generic spinners where possible.
 - **Responsive Layout**: Fully optimized for Desktop, Tablet, and Mobile workflows.
 
-### 6. Performance Mandates
+### 8. Performance Mandates
 - **Instant Interactions**: Sub-100ms response times for local state updates.
 - **Optimistic UI**: State updates are applied immediately, with automatic rollback on API failure.
 - **60 FPS Animations**: Hardware-accelerated transitions for a fluid feel.
@@ -60,3 +79,4 @@ This document serves as the official "Source of Truth" for all features implemen
 - **Strict TypeScript**: 100% type coverage for all API responses and component props.
 - **Validation Gates**: Zod-based validation for all critical inputs.
 - **Auth Integrity**: Utilization of standard PAT and API Key protocols.
+

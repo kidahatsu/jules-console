@@ -14,10 +14,6 @@ export interface ProviderProfile {
     isActive: boolean;
 }
 
-export type JulesAccount = ProviderProfile;
-
-
-
 export function getAccounts(): ProviderProfile[] {
     const saved = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
     const initialAccount: ProviderProfile = {
@@ -72,7 +68,7 @@ export function getActiveAccount(): ProviderProfile | null {
 }
 
 // Helper to get key from active account
-export function getApiKey(): string {
+function getApiKey(): string {
     const active = getActiveAccount();
     return active?.apiKey || env.JULES_API_KEY;
 }
@@ -83,14 +79,8 @@ export function getGithubToken(): string {
     return active?.githubToken || env.GITHUB_TOKEN;
 }
 
-// Helper to get HF token from active account
-export function getHFToken(): string {
-    const active = getActiveAccount();
-    return active?.hfToken || env.HF_TOKEN;
-}
-
 // Helper to build the correct base path for the API
-export function getJulesBaseUrl(): string {
+function getJulesBaseUrl(): string {
     // Always use the proxy path. The Jules API handles project context 
     // via the API key (x-goog-api-key) rather than the URL path.
     return JULES_API_URL;

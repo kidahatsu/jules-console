@@ -120,7 +120,7 @@ export default function Inbox() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
-                        placeholder="Search repoGroup signals..."
+                        placeholder="Search activity signals..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-11 pr-4 py-4 bg-black/40 border border-white/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm placeholder:text-zinc-600 shadow-2xl backdrop-blur-xl transition-all font-medium"
